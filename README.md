@@ -1,5 +1,5 @@
 <p align="center">
-<img src="assets/meme-banner.svg">
+<img src="assets/logo.svg">
 </p>
 
 # The Hidden Life of Memes
