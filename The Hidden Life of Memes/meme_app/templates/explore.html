@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+        <title>Explore Memes — Lifecycle Dataset</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <style>
+            :root {
+                --bg: #0a0a0f;
+                --surface: #13131a;
+                --card: #1a1a24;
+                --border: #2a2a38;
+                --text: #f0f0f8;
+                --muted: #7a7a9a;
+                --accent: #feca57;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: "Syne", sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+            }
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--bg);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 3px;
+            }
+
+            nav {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                background: rgba(10, 10, 15, 0.92);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid var(--border);
+                padding: 0 2rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 60px;
+            }
+            .nav-logo {
+                font-size: 1.1rem;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                text-decoration: none;
+            }
+            .nav-logo span {
+                color: var(--text);
+            }
+            .nav-logo em {
+                color: var(--accent);
+                font-style: normal;
+                font-weight: 800;
+            }
+            .nav-right {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            .nav-right a {
+                font-size: 0.75rem;
+                color: var(--muted);
+                text-decoration: none;
+                padding: 5px 14px;
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                transition: all 0.2s;
+                font-family: "Space Mono", monospace;
+            }
+            .nav-right a:hover,
+            .nav-right a.active {
+                color: var(--accent);
+                border-color: var(--accent);
+            }
+
+            .page-hero {
+                padding: 3.5rem 2rem 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+            .page-hero h1 {
+                font-size: clamp(2rem, 4vw, 3rem);
+                font-weight: 800;
+                letter-spacing: -0.04em;
+                line-height: 1.05;
+                margin-bottom: 0.5rem;
+            }
+            .page-hero h1 em {
+                color: var(--accent);
+                font-style: normal;
+            }
+            .page-hero p {
+                font-size: 0.85rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                line-height: 1.7;
+            }
+
+            .wrap {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 2rem 5rem;
+            }
+
+            .sec-title {
+                font-size: 0.65rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 1rem;
+                font-family: "Space Mono", monospace;
+                padding-top: 2.5rem;
+                border-top: 1px solid var(--border);
+            }
+            .sec-title:first-child {
+                border-top: none;
+                padding-top: 0;
+            }
+
+            /* Stat summary row */
+            .stat-row {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 0.75rem;
+                margin-bottom: 2.5rem;
+            }
+            .scard {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 1rem;
+                text-align: center;
+            }
+            .scard .v {
+                font-size: 1.8rem;
+                font-weight: 800;
+                color: var(--accent);
+                line-height: 1.1;
+            }
+            .scard .l {
+                font-size: 0.65rem;
+                color: var(--muted);
+                margin-top: 4px;
+                font-family: "Space Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+
+            /* Chart box */
+            .chart-box {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            .chart-title {
+                font-size: 0.65rem;
+                color: var(--muted);
+                margin-bottom: 1rem;
+                font-family: "Space Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+            }
+            .chart-box canvas {
+                display: block;
+            }
+
+            /* Two col / three col grids */
+            .g2 {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+            .g3 {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 1rem;
+            }
+            .g2 .full,
+            .g3 .full {
+                grid-column: 1/-1;
+            }
+            @media (max-width: 720px) {
+                .g2,
+                .g3 {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Tier badges */
+            .tier-badge {
+                display: inline-block;
+                font-size: 0.65rem;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-family: "Space Mono", monospace;
+                font-weight: 700;
+                text-transform: uppercase;
+                border: 1px solid;
+            }
+
+            /* Table */
+            .tbl-wrap {
+                overflow-x: auto;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.75rem;
+            }
+            th {
+                background: #13131a;
+                padding: 0.65rem 1rem;
+                text-align: left;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                font-size: 0.6rem;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                white-space: nowrap;
+                border-bottom: 1px solid var(--border);
+                font-weight: 400;
+            }
+            td {
+                padding: 0.6rem 1rem;
+                border-bottom: 1px solid rgba(42, 42, 56, 0.6);
+                color: var(--text);
+                white-space: nowrap;
+                vertical-align: middle;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            tr:hover td {
+                background: rgba(255, 255, 255, 0.02);
+            }
+            td a {
+                color: var(--accent);
+                text-decoration: none;
+                font-size: 0.7rem;
+            }
+            td a:hover {
+                text-decoration: underline;
+            }
+            .tag {
+                display: inline-block;
+                font-size: 0.6rem;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-family: "Space Mono", monospace;
+                font-weight: 700;
+            }
+            .bool-yes {
+                color: #1dd1a1;
+            }
+            .bool-no {
+                color: #ff6b6b;
+            }
+
+            /* Reddit posts */
+            .post-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 0.9rem 1.1rem;
+                margin-bottom: 0.6rem;
+                display: flex;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            .post-score {
+                min-width: 56px;
+                text-align: center;
+                background: rgba(254, 202, 87, 0.1);
+                border: 1px solid rgba(254, 202, 87, 0.25);
+                border-radius: 8px;
+                padding: 0.4rem 0.3rem;
+            }
+            .post-score .ps {
+                font-size: 1rem;
+                font-weight: 800;
+                color: var(--accent);
+                line-height: 1;
+            }
+            .post-score .pl {
+                font-size: 0.55rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+            }
+            .post-body {
+                flex: 1;
+                min-width: 0;
+            }
+            .post-title {
+                font-size: 0.8rem;
+                font-weight: 600;
+                line-height: 1.4;
+                margin-bottom: 0.35rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .post-meta {
+                font-size: 0.65rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                display: flex;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+            }
+            .post-sub {
+                color: var(--accent);
+            }
+        </style>
+    </head>
+    <body>
+        <nav>
+            <a class="nav-logo" href="/"
+                ><span>Survival of the </span><em>Funniest</em></a
+            >
+            <div class="nav-right">
+                <a href="/">Home</a>
+                <a href="/explore" class="active">Explore</a>
+                <a href="/lifecycle">How it works</a>
+            </div>
+        </nav>
+
+        <div class="page-hero">
+            <h1>Meme <em>Dataset</em> Explorer</h1>
+            <p>
+                Full lifecycle analysis · Reddit engagement · Platform spread ·
+                Comparative research data
+            </p>
+        </div>
+
+        <div class="wrap">
+            <!-- ── SUMMARY STATS ── -->
+            <div class="sec-title">Dataset overview</div>
+            <div class="stat-row">
+                <div class="scard">
+                    <div class="v">{{ total_memes }}</div>
+                    <div class="l">Memes studied</div>
+                </div>
+                <div class="scard">
+                    <div class="v">{{ total_reddit }}</div>
+                    <div class="l">Reddit posts</div>
+                </div>
+                {% set extinct_count = tier_dist.get('extinct', 0) %} {% set
+                phoenix_count = tier_dist.get('phoenix', 0) %} {% set
+                survivor_count = tier_dist.get('survivor', 0) %}
+                <div class="scard">
+                    <div class="v">{{ extinct_count }}</div>
+                    <div class="l">Extinct memes</div>
+                </div>
+                <div class="scard">
+                    <div class="v">{{ survivor_count }}</div>
+                    <div class="l">Survivors</div>
+                </div>
+                <div class="scard">
+                    <div class="v">{{ phoenix_count }}</div>
+                    <div class="l">Phoenixes</div>
+                </div>
+                <div
+                    class="scard"
+                    style="border-color: rgba(254, 202, 87, 0.3)"
+                >
+                    <div class="v">
+                        {{ ((extinct_count / total_memes) * 100)|round|int }}%
+                    </div>
+                    <div class="l">Mortality rate</div>
+                </div>
+            </div>
+
+            <!-- ── VIRALITY + TIER OVERVIEW ── -->
+            <div class="sec-title">Virality ranking &amp; survival tiers</div>
+            <div class="g2">
+                <div class="chart-box full">
+                    <div class="chart-title">
+                        Virality score — all memes (coloured by survival tier)
+                    </div>
+                    <div
+                        style="position:relative;height:{{ top_virality|length * 36 + 60 }}px"
+                    >
+                        <canvas id="viralityChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Survival tier distribution</div>
+                    <div style="position: relative; height: 260px">
+                        <canvas id="tierDonut"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Lifecycle label distribution</div>
+                    <div style="position: relative; height: 260px">
+                        <canvas id="lcDonut"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── LIFESPAN + SPEED ── -->
+            <div class="sec-title">Lifespan &amp; velocity</div>
+            <div class="g2">
+                <div class="chart-box">
+                    <div class="chart-title">
+                        Lifespan in weeks (birth → death)
+                    </div>
+                    <div
+                        style="position:relative;height:{{ [lifespan_data|length * 28 + 60, 200]|max }}px"
+                    >
+                        <canvas id="lifespanBar"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">
+                        Rise speed vs decay speed (bubble = virality)
+                    </div>
+                    <div style="position: relative; height: 340px">
+                        <canvas id="riseDecayScatter"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── PLATFORM SPREAD ── -->
+            <div class="sec-title">Platform spread &amp; origin</div>
+            <div class="g2">
+                <div class="chart-box">
+                    <div class="chart-title">
+                        Origin platform
+                        <span style="color: var(--muted); font-size: 0.6rem"
+                            >(Unknown = KYM data missing)</span
+                        >
+                    </div>
+                    <div style="position: relative; height: 260px">
+                        <canvas id="originPie"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">
+                        Platform spread count vs virality
+                    </div>
+                    <div style="position: relative; height: 260px">
+                        <canvas id="platScatter"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── REDDIT ANALYSIS ── -->
+            <div class="sec-title">Reddit engagement analysis</div>
+            <div class="g2">
+                <div class="chart-box full">
+                    <div class="chart-title">Total Reddit score per meme</div>
+                    <div
+                        style="position:relative;height:{{ reddit_by_meme|length * 36 + 60 }}px"
+                    >
+                        <canvas id="redditByMeme"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box full">
+                    <div class="chart-title">Avg comments per meme</div>
+                    <div
+                        style="position:relative;height:{{ reddit_by_meme|length * 36 + 60 }}px"
+                    >
+                        <canvas id="commentsBar"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">
+                        Reddit activity over time (monthly score)
+                    </div>
+                    <div style="position: relative; height: 300px">
+                        <canvas id="redditTimeline"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── FULL DATASET TABLE ── -->
+            <div class="sec-title" style="margin-top: 2.5rem">
+                Full lifecycle dataset table
+            </div>
+            <div class="tbl-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Meme</th>
+                            <th>Year</th>
+                            <th>Origin</th>
+                            <th>Peak date</th>
+                            <th>Lifespan (w)</th>
+                            <th>Peak interest</th>
+                            <th>Virality</th>
+                            <th>Adaptability</th>
+                            <th>Cultural score</th>
+                            <th>Survival tier</th>
+                            <th>Reborn</th>
+                            <th>Wikipedia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in table_rows %} {% set mcolor =
+                        colors_map.get(r.meme_name, '#888') %}
+                        <tr>
+                            <td>
+                                <a
+                                    href="/meme/{{ r.meme_name|lower|replace(' ','-') }}"
+                                    style="color:{{ mcolor }};font-weight:600"
+                                    >{{ r.meme_name }}</a
+                                >
+                            </td>
+                            <td style="color: var(--muted)">
+                                {{ r.kym_year }}
+                            </td>
+                            <td style="color: var(--muted)">
+                                {{ r.kym_origin_platform }}
+                            </td>
+                            <td
+                                style="
+                                    font-family:
+                                        &quot;Space Mono&quot;, monospace;
+                                    font-size: 0.7rem;
+                                "
+                            >
+                                {{ (r.trends_peak_date|string)[:7] }}
+                            </td>
+                            <td style="font-weight:700;color:{{ mcolor }}">
+                                {{ r.trends_lifespan_weeks }}
+                            </td>
+                            <td>{{ r.trends_peak_value }}</td>
+                            <td style="font-weight: 700">
+                                {{ r.virality_score }}
+                            </td>
+                            <td>{{ r.adaptability_score }}</td>
+                            <td>{{ r.cultural_permanence_score }}</td>
+                            <td>
+                                {% set tc =
+                                tier_colors.get(r.survival_tier|string, '#888')
+                                %}
+                                <span
+                                    class="tag"
+                                    style="background:{{ tc }}22;color:{{ tc }};border:1px solid {{ tc }}55"
+                                >
+                                    {{ r.survival_tier }}
+                                </span>
+                            </td>
+                            <td
+                                class="{{ 'bool-yes' if r.trends_was_reborn == True or r.trends_was_reborn == 'True' else 'bool-no' }}"
+                            >
+                                {{ 'Yes' if r.trends_was_reborn == True or
+                                r.trends_was_reborn == 'True' else 'No' }}
+                            </td>
+                            <td
+                                class="{{ 'bool-yes' if r.wiki_has_article == True or r.wiki_has_article == 'True' else 'bool-no' }}"
+                            >
+                                {{ 'Yes' if r.wiki_has_article == True or
+                                r.wiki_has_article == 'True' else 'No' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- /wrap -->
+
+        <script>
+            const TIER_COLORS = {{ tier_colors|tojson }};
+            const PALETTE     = {{ meme_palette|tojson }};
+
+            const cd = {
+              tooltip:{backgroundColor:"#1a1a24",borderColor:"#2a2a38",borderWidth:1,
+                titleColor:"#f0f0f8",bodyColor:"#7a7a9a",
+                titleFont:{family:"Syne",weight:"bold"},bodyFont:{family:"Space Mono",size:11},padding:10},
+              legend:{labels:{color:"#7a7a9a",font:{family:"Space Mono",size:11},boxWidth:10,boxHeight:10}},
+            };
+            const scaleXY = {
+              x:{ticks:{color:"#7a7a9a",font:{family:"Space Mono",size:10}},grid:{color:"#2a2a38"}},
+              y:{ticks:{color:"#7a7a9a",font:{family:"Space Mono",size:10}},grid:{color:"#2a2a38"}},
+            };
+
+            // 1. Virality horizontal bar
+            (()=>{
+              const raw = {{ top_virality|tojson }};
+              const cols = raw.map(d=>TIER_COLORS[d.survival_tier]||"#888");
+              new Chart(document.getElementById("viralityChart"),{
+                type:"bar",
+                data:{
+                  labels:raw.map(d=>d.meme_name),
+                  datasets:[{label:"Virality score",data:raw.map(d=>d.virality_score),
+                    backgroundColor:cols.map(c=>c+"cc"),borderColor:cols,borderWidth:1.5,borderRadius:6}]
+                },
+                options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",
+                  plugins:{legend:{display:false},tooltip:{...cd.tooltip}},
+                  scales:{
+                    x:{...scaleXY.x,min:0,max:100},
+                    y:{ticks:{color:"#f0f0f8",font:{family:"Syne",size:12,weight:"600"}},grid:{color:"#2a2a38"}}
+                  },
+                  datasets:{bar:{maxBarThickness:28}}
+                }
+              });
+            })();
+
+            // 2. Tier donut
+            (()=>{
+              const d = {{ tier_dist|tojson }};
+              const keys = Object.keys(d), vals = Object.values(d);
+              const cols = keys.map(k=>TIER_COLORS[k]||"#888");
+              new Chart(document.getElementById("tierDonut"),{
+                type:"doughnut",
+                data:{labels:keys,datasets:[{data:vals,backgroundColor:cols.map(c=>c+"cc"),
+                  borderColor:"#13131a",borderWidth:3,hoverOffset:8}]},
+                options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
+                  plugins:{legend:{...cd.legend,position:"bottom"},
+                    tooltip:{...cd.tooltip,callbacks:{label:i=>` ${i.label}: ${i.raw} memes`}}}}
+              });
+            })();
+
+            // 3. Lifecycle label donut
+            (()=>{
+              const d = {{ lc_dist|tojson }};
+              const keys = Object.keys(d), vals = Object.values(d);
+              const cols = ["#FF6B6B","#FF9F43","#FECA57","#1DD1A1","#A29BFE","#48DBFB"];
+              new Chart(document.getElementById("lcDonut"),{
+                type:"doughnut",
+                data:{labels:keys,datasets:[{data:vals,backgroundColor:cols.slice(0,keys.length).map(c=>c+"cc"),
+                  borderColor:"#13131a",borderWidth:3,hoverOffset:8}]},
+                options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
+                  plugins:{legend:{...cd.legend,position:"bottom"},
+                    tooltip:{...cd.tooltip,callbacks:{label:i=>` ${i.label}: ${i.raw}`}}}}
+              });
+            })();
+
+            // 4. Lifespan horizontal bar
+            (()=>{
+              const raw = {{ lifespan_data|tojson }};
+              const cols = raw.map((_,i)=>PALETTE[i%PALETTE.length]);
+              new Chart(document.getElementById("lifespanBar"),{
+                type:"bar",
+                data:{labels:raw.map(d=>d.meme_name),
+                  datasets:[{label:"Weeks",data:raw.map(d=>d.trends_lifespan_weeks),
+                    backgroundColor:cols.map(c=>c+"bb"),borderColor:cols,borderWidth:1.5,borderRadius:4}]},
+                options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",
+                  plugins:{legend:{display:false},tooltip:{...cd.tooltip,callbacks:{label:i=>` ${i.raw} weeks`}}},
+                  scales:{x:{...scaleXY.x},y:{ticks:{color:"#d0d0e0",font:{family:"Syne",size:11}},grid:{color:"#2a2a38"}}}}
+              });
+            })();
+
+            // 5. Rise vs decay scatter
+            (()=>{
+              const raw = {{ rise_decay|tojson }};
+              const tierGroups = {};
+              raw.forEach(d=>{
+                const t = d.survival_tier||"unknown";
+                if(!tierGroups[t]) tierGroups[t]=[];
+                tierGroups[t].push({x:Math.min(d.trends_rise_speed,120),y:Math.min(d.trends_decay_speed,120),label:d.meme_name});
+              });
+              const datasets = Object.entries(tierGroups).map(([tier,pts])=>({
+                label:tier,data:pts,backgroundColor:(TIER_COLORS[tier]||"#888")+"99",
+                borderColor:TIER_COLORS[tier]||"#888",borderWidth:1.5,pointRadius:7,pointHoverRadius:10,
+              }));
+              new Chart(document.getElementById("riseDecayScatter"),{
+                type:"scatter",data:{datasets},
+                options:{responsive:true,maintainAspectRatio:false,
+                  plugins:{legend:{...cd.legend,position:"top"},
+                    tooltip:{...cd.tooltip,callbacks:{label:i=>`${i.raw.label}: rise ${i.raw.x.toFixed(1)} / decay ${i.raw.y.toFixed(1)}`}}},
+                  scales:{
+                    x:{...scaleXY.x,min:0,max:55,title:{display:true,text:"Rise speed (capped at 50)",color:"#7a7a9a",font:{family:"Space Mono",size:10}}},
+                    y:{...scaleXY.y,min:0,max:55,title:{display:true,text:"Decay speed (capped at 50)",color:"#7a7a9a",font:{family:"Space Mono",size:10}}}
+                  }
+                }
+              });
+            })();
+
+            // 6. Origin platform pie
+            (()=>{
+              const d = {{ origin_counts|tojson }};
+              const keys = Object.keys(d).filter(k=>k&&k!=="N/A"&&k!=="nan");
+              const vals = keys.map(k=>d[k]);
+              const cols = ["#FF6B6B","#FF9F43","#FECA57","#1DD1A1","#48DBFB","#A29BFE","#FF78C4","#FD79A8"];
+              new Chart(document.getElementById("originPie"),{
+                type:"pie",
+                data:{labels:keys,datasets:[{data:vals,backgroundColor:cols.slice(0,keys.length).map(c=>c+"cc"),
+                  borderColor:"#13131a",borderWidth:2,hoverOffset:8}]},
+                options:{responsive:true,maintainAspectRatio:false,
+                  plugins:{legend:{...cd.legend,position:"right"},
+                    tooltip:{...cd.tooltip,callbacks:{label:i=>` ${i.label}: ${i.raw} memes`}}}}
+              });
+            })();
+
+            // 7. Platform scatter (spread count vs virality)
+            (()=>{
+              const raw = {{ plat_data|tojson }};
+              const pts = raw.filter(d=>d.virality_score&&d.kym_platform_count)
+                .map((d,i)=>({x:d.kym_platform_count,y:d.virality_score,label:d.meme_name,color:PALETTE[i%PALETTE.length]}));
+              new Chart(document.getElementById("platScatter"),{
+                type:"scatter",
+                data:{datasets:[{label:"Memes",data:pts,
+                  backgroundColor:pts.map(p=>p.color+"99"),
+                  borderColor:pts.map(p=>p.color),
+                  borderWidth:1.5,pointRadius:8,pointHoverRadius:11}]},
+                options:{responsive:true,maintainAspectRatio:false,
+                  plugins:{legend:{display:false},
+                    tooltip:{...cd.tooltip,callbacks:{label:i=>`${i.raw.label}: ${i.raw.x} platforms, ${i.raw.y} virality`}}},
+                  scales:{
+                    x:{...scaleXY.x,title:{display:true,text:"Platform count",color:"#7a7a9a",font:{family:"Space Mono",size:10}}},
+                    y:{...scaleXY.y,title:{display:true,text:"Virality score",color:"#7a7a9a",font:{family:"Space Mono",size:10}}}
+                  }
+                }
+              });
+            })();
+
+            // 8. Reddit total score per meme
+            (()=>{
+              const raw = {{ reddit_by_meme|tojson }};
+              const cols = raw.map((_,i)=>PALETTE[i%PALETTE.length]);
+              new Chart(document.getElementById("redditByMeme"),{
+                type:"bar",
+                data:{labels:raw.map(d=>d.meme_name),
+                  datasets:[{label:"Total score",data:raw.map(d=>d.total_score),
+                    backgroundColor:cols.map(c=>c+"bb"),borderColor:cols,borderWidth:1.5,borderRadius:6},
+                   {label:"Max single post",data:raw.map(d=>d.max_score),
+                    backgroundColor:cols.map(c=>c+"44"),borderColor:cols.map(c=>c+"88"),borderWidth:1,borderRadius:6,type:"bar"}
+                  ]},
+                options:{responsive:true,maintainAspectRatio:false,
+                  plugins:{legend:{...cd.legend},tooltip:{...cd.tooltip,callbacks:{label:i=>` ${i.dataset.label}: ${(i.raw/1000).toFixed(1)}K`}}},
+                  scales:{x:{...scaleXY.x,ticks:{...scaleXY.x.ticks,maxRotation:45}},y:{...scaleXY.y}}}
+              });
+            })();
+
+            // 9. Avg comments per meme
+            (()=>{
+              const raw = {{ reddit_by_meme|tojson }};
+              const sorted = [...raw].sort((a,b)=>b.avg_comments-a.avg_comments);
+              const cols = sorted.map((_,i)=>PALETTE[i%PALETTE.length]);
+              new Chart(document.getElementById("commentsBar"),{
+                type:"bar",
+                data:{labels:sorted.map(d=>d.meme_name),
+                  datasets:[{label:"Avg comments",data:sorted.map(d=>Math.round(d.avg_comments)),
+                    backgroundColor:cols.map(c=>c+"bb"),borderColor:cols,borderWidth:1.5,borderRadius:6}]},
+                options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",
+                  plugins:{legend:{display:false},tooltip:{...cd.tooltip}},
+                  scales:{x:{...scaleXY.x},y:{ticks:{color:"#d0d0e0",font:{family:"Syne",size:11}},grid:{color:"#2a2a38"}}},
+                  datasets:{bar:{maxBarThickness:28}}}
+              });
+            })();
+
+            // 10. Reddit monthly timeline
+            (()=>{
+              const raw = {{ monthly_reddit|tojson }};
+              new Chart(document.getElementById("redditTimeline"),{
+                type:"line",
+                data:{labels:raw.map(d=>d.month),
+                  datasets:[{label:"Monthly score",data:raw.map(d=>d.score),
+                    borderColor:"#FF6B6B",borderWidth:2,pointRadius:0,
+                    fill:true,backgroundColor:"#FF6B6B18",tension:0.3}]},
+                options:{responsive:true,maintainAspectRatio:false,
+                  plugins:{legend:{display:false},tooltip:{...cd.tooltip}},
+                  scales:{
+                    x:{ticks:{color:"#7a7a9a",font:{family:"Space Mono",size:9},maxRotation:45,autoSkip:true,maxTicksLimit:24},grid:{color:"#2a2a38"}},
+                    y:{...scaleXY.y,ticks:{...scaleXY.y.ticks,callback:v=>`${(v/1000).toFixed(0)}K`}}
+                  }
+                }
+              });
+            })();
+        </script>
+    </body>
+</html>

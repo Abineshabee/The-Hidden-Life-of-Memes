@@ -1,0 +1,2065 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+        <title>Lifecycle Algorithm — Survival of the Funniest</title>
+        <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <style>
+            :root {
+                --bg: #0a0a0f;
+                --surface: #13131a;
+                --card: #1a1a24;
+                --border: #2a2a38;
+                --text: #f0f0f8;
+                --muted: #7a7a9a;
+                --accent: #feca57;
+                --c-birth: #1dd1a1;
+                --c-peak: #feca57;
+                --c-decay: #ff9f43;
+                --c-death: #ff6b6b;
+                --c-reborn: #a29bfe;
+                --pad: clamp(0.75rem, 3vw, 2rem);
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            html {
+                scroll-behavior: smooth;
+                width: 100%;
+            }
+            body {
+                font-family: "Syne", sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                overflow-x: hidden;
+                width: 100%;
+            }
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--bg);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 3px;
+            }
+
+            /* NAV */
+            nav {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                background: rgba(10, 10, 15, 0.92);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid var(--border);
+                padding: 0 var(--pad);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 60px;
+                width: 100%;
+            }
+            .nav-logo {
+                font-size: 1.1rem;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                text-decoration: none;
+                color: var(--text);
+            }
+            .nav-logo em {
+                color: var(--accent);
+                font-style: normal;
+                font-weight: 800;
+            }
+            .nav-right {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            .nav-right a {
+                font-size: 0.75rem;
+                color: var(--muted);
+                text-decoration: none;
+                padding: 5px 14px;
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                transition: all 0.2s;
+                font-family: "Space Mono", monospace;
+                white-space: nowrap;
+            }
+            .nav-right a:hover,
+            .nav-right a.active {
+                color: var(--accent);
+                border-color: var(--accent);
+            }
+            @media (max-width: 480px) {
+                .nav-right {
+                    display: none;
+                }
+            }
+
+            /* PAGE HERO */
+            .page-hero {
+                padding: 3rem var(--pad) 1.5rem;
+                width: 100%;
+            }
+            .page-hero h1 {
+                font-size: clamp(1.6rem, 4vw, 2.8rem);
+                font-weight: 800;
+                letter-spacing: -0.04em;
+                line-height: 1.05;
+                margin-bottom: 0.4rem;
+            }
+            .page-hero h1 em {
+                color: var(--accent);
+                font-style: normal;
+            }
+            .page-hero p {
+                font-size: 0.85rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                line-height: 1.7;
+            }
+
+            /* OUTER */
+            .outer {
+                width: 100%;
+                padding: 0 var(--pad) 5rem;
+            }
+
+            /* SECTION TITLE */
+            .sec-title {
+                font-size: 0.65rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 1rem;
+                font-family: "Space Mono", monospace;
+                padding-top: 2rem;
+                border-top: 1px solid var(--border);
+            }
+            .sec-title.first {
+                border-top: none;
+                padding-top: 0;
+            }
+
+            /* ═══════════════════════════════════════════════════
+   DRAW ZONE — big hero canvas + presets side by side
+═══════════════════════════════════════════════════ */
+            .draw-zone {
+                display: grid;
+                grid-template-columns: 1fr 200px;
+                gap: 1rem;
+                align-items: stretch;
+                width: 100%;
+            }
+            @media (max-width: 700px) {
+                .draw-zone {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* The canvas card — takes most of the width */
+            .canvas-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                overflow: hidden;
+            }
+            .canvas-card-head {
+                padding: 0.85rem 1.25rem;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .canvas-card-title {
+                font-size: 0.65rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+            }
+            .canvas-card-body {
+                padding: 1rem 1.25rem;
+            }
+
+            /* Big canvas */
+            #curveCanvas {
+                display: block;
+                width: 100%;
+                height: clamp(220px, 32vh, 380px);
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                cursor: crosshair;
+                touch-action: none;
+            }
+            .edit-hint {
+                font-size: 0.6rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                margin-top: 0.6rem;
+                line-height: 1.6;
+                display: flex;
+                gap: 1.5rem;
+                flex-wrap: wrap;
+            }
+            .edit-hint span::before {
+                content: "● ";
+                color: var(--accent);
+            }
+
+            /* Presets panel — tall right column */
+            .presets-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            .presets-card-head {
+                padding: 0.85rem 1rem;
+                border-bottom: 1px solid var(--border);
+                font-size: 0.65rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+            }
+            .presets-list {
+                padding: 0.75rem;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.4rem;
+                flex: 1;
+                overflow-y: auto;
+            }
+            .preset-btn {
+                font-family: "Space Mono", monospace;
+                font-size: 0.62rem;
+                padding: 7px 10px;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                color: var(--muted);
+                cursor: pointer;
+                transition: all 0.15s;
+                text-align: left;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 100%;
+            }
+            .preset-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+                background: var(--card);
+            }
+
+            /* ═══════════════════════════════════════════════════
+   THRESHOLD SLIDERS — horizontal row below canvas
+═══════════════════════════════════════════════════ */
+            .sliders-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 0.85rem 1.25rem;
+                margin-top: 1rem;
+            }
+            .sliders-inner {
+                display: grid;
+                grid-template-columns: repeat(
+                    auto-fill,
+                    minmax(min(180px, 100%), 1fr)
+                );
+                gap: 0.65rem 1.5rem;
+            }
+            .slider-row {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .slider-label {
+                font-size: 0.6rem;
+                font-family: "Space Mono", monospace;
+                width: 72px;
+                flex-shrink: 0;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+            .slider-row input[type="range"] {
+                flex: 1;
+                min-width: 0;
+                -webkit-appearance: none;
+                height: 3px;
+                border-radius: 2px;
+                cursor: pointer;
+                outline: none;
+            }
+            .slider-row input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                cursor: pointer;
+                border: 2px solid var(--bg);
+                transition: transform 0.15s;
+            }
+            .slider-row input[type="range"]::-webkit-slider-thumb:hover {
+                transform: scale(1.3);
+            }
+            .slider-val {
+                font-size: 0.65rem;
+                font-weight: 700;
+                width: 34px;
+                text-align: right;
+                flex-shrink: 0;
+                font-family: "Space Mono", monospace;
+            }
+            .sliders-note {
+                font-size: 0.58rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                margin-top: 0.65rem;
+                line-height: 1.6;
+            }
+
+            .sr-birth input {
+                background: var(--c-birth);
+            }
+            .sr-birth input::-webkit-slider-thumb {
+                background: var(--c-birth);
+            }
+            .sr-birth .slider-val,
+            .sr-birth .slider-label {
+                color: var(--c-birth);
+            }
+            .sr-decay input {
+                background: var(--c-decay);
+            }
+            .sr-decay input::-webkit-slider-thumb {
+                background: var(--c-decay);
+            }
+            .sr-decay .slider-val,
+            .sr-decay .slider-label {
+                color: var(--c-decay);
+            }
+            .sr-death input {
+                background: var(--c-death);
+            }
+            .sr-death input::-webkit-slider-thumb {
+                background: var(--c-death);
+            }
+            .sr-death .slider-val,
+            .sr-death .slider-label {
+                color: var(--c-death);
+            }
+            .sr-reborn input {
+                background: var(--c-reborn);
+            }
+            .sr-reborn input::-webkit-slider-thumb {
+                background: var(--c-reborn);
+            }
+            .sr-reborn .slider-val,
+            .sr-reborn .slider-label {
+                color: var(--c-reborn);
+            }
+            .sr-gap input {
+                background: var(--border);
+            }
+            .sr-gap input::-webkit-slider-thumb {
+                background: var(--muted);
+            }
+            .sr-gap .slider-val,
+            .sr-gap .slider-label {
+                color: var(--muted);
+            }
+
+            /* ═══════════════════════════════════════════════════
+   STEPS GRID — 6 boxes full width
+═══════════════════════════════════════════════════ */
+            .steps-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 1rem 1.25rem;
+                width: 100%;
+            }
+            .steps-grid {
+                display: grid;
+                grid-template-columns: repeat(
+                    auto-fill,
+                    minmax(min(155px, calc(50% - 0.4rem)), 1fr)
+                );
+                gap: 0.65rem;
+                width: 100%;
+            }
+            .step-box {
+                border-radius: 10px;
+                border: 1px solid;
+                padding: 0.85rem 0.9rem;
+                transition:
+                    opacity 0.25s,
+                    transform 0.2s;
+                min-width: 0;
+            }
+            .step-box.inactive {
+                opacity: 0.25;
+            }
+            .step-box.active {
+                transform: translateY(-2px);
+            }
+            .sb-num {
+                font-size: 0.55rem;
+                font-family: "Space Mono", monospace;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 3px;
+            }
+            .sb-name {
+                font-size: 0.95rem;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                margin-bottom: 3px;
+            }
+            .sb-formula {
+                font-size: 0.58rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                margin-bottom: 4px;
+                word-break: break-word;
+            }
+            .sb-result {
+                font-size: 0.6rem;
+                font-family: "Space Mono", monospace;
+                line-height: 1.45;
+                min-height: 2em;
+                word-break: break-word;
+            }
+
+            /* ═══════════════════════════════════════════════════
+   OUTPUT ROW — result + timeline
+═══════════════════════════════════════════════════ */
+            .output-row {
+                display: grid;
+                grid-template-columns: 260px 1fr;
+                gap: 1rem;
+                align-items: start;
+            }
+            @media (max-width: 700px) {
+                .output-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* Result card */
+            .result-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 1.25rem;
+                transition: border-color 0.3s;
+            }
+            .result-label-wrap {
+                margin-bottom: 0.75rem;
+                padding-bottom: 0.75rem;
+                border-bottom: 1px solid var(--border);
+            }
+            .result-label-tag {
+                font-size: 0.55rem;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                margin-bottom: 4px;
+            }
+            .result-label-big {
+                font-size: 2rem;
+                font-weight: 800;
+                letter-spacing: -0.04em;
+                transition: color 0.3s;
+                line-height: 1;
+            }
+            .result-tier {
+                font-size: 0.6rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                margin-top: 3px;
+            }
+            .result-desc {
+                font-size: 0.68rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                line-height: 1.65;
+                margin-bottom: 0.75rem;
+            }
+            .result-stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.4rem;
+            }
+            .rstat-box {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0.4rem 0.6rem;
+            }
+            .rstat-val {
+                font-size: 0.8rem;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .rstat-lbl {
+                font-size: 0.55rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                margin-top: 1px;
+            }
+
+            /* Chart box */
+            .chart-box {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 1.25rem;
+                width: 100%;
+            }
+            .chart-title {
+                font-size: 0.62rem;
+                color: var(--muted);
+                margin-bottom: 0.85rem;
+                font-family: "Space Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.07em;
+                white-space: normal;
+                line-height: 1.5;
+            }
+            .thresh-legend {
+                display: flex;
+                gap: 0.65rem;
+                flex-wrap: wrap;
+                margin-top: 0.75rem;
+                padding-top: 0.65rem;
+                border-top: 1px solid var(--border);
+            }
+            .tl-item {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 0.58rem;
+                font-family: "Space Mono", monospace;
+            }
+            .tl-dash {
+                width: 16px;
+                border-top: 2px dashed;
+                flex-shrink: 0;
+            }
+
+            /* Mini 3-col */
+            .g3 {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1rem;
+            }
+            @media (max-width: 700px) {
+                .g3 {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .mini-title {
+                font-size: 0.6rem;
+                color: var(--muted);
+                font-family: "Space Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.07em;
+                margin-bottom: 0.65rem;
+            }
+
+            /* Threshold table */
+            .tt-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.6rem;
+                padding: 0.5rem 0;
+                border-bottom: 1px solid var(--border);
+                flex-wrap: wrap;
+            }
+            .tt-row:last-child {
+                border-bottom: none;
+            }
+            .tt-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                flex-shrink: 0;
+                margin-top: 5px;
+            }
+            .tt-left {
+                flex: 0 0 95px;
+                min-width: 0;
+            }
+            .tt-name {
+                font-size: 0.7rem;
+                font-weight: 700;
+                line-height: 1.2;
+            }
+            .tt-lifespan {
+                font-size: 0.56rem;
+                font-family: "Space Mono", monospace;
+                color: var(--muted);
+                margin-top: 2px;
+            }
+            .tt-mid {
+                flex: 1;
+                min-width: 120px;
+            }
+            .tt-cond {
+                font-size: 0.6rem;
+                font-family: "Space Mono", monospace;
+                color: var(--muted);
+                line-height: 1.5;
+                word-break: break-word;
+            }
+            .tt-badges {
+                display: flex;
+                gap: 0.3rem;
+                flex-wrap: wrap;
+                margin-top: 0.3rem;
+            }
+            .tt-badge {
+                font-size: 0.53rem;
+                padding: 2px 6px;
+                border-radius: 10px;
+                border: 1px solid;
+                font-family: "Space Mono", monospace;
+                white-space: nowrap;
+            }
+            .tt-cur {
+                flex-shrink: 0;
+                font-size: 0.53rem;
+                font-family: "Space Mono", monospace;
+                padding: 2px 7px;
+                border-radius: 20px;
+                border: 1px solid var(--accent);
+                color: var(--accent);
+                align-self: flex-start;
+                white-space: nowrap;
+            }
+
+            /* gap utility */
+            .gap {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+        </style>
+    </head>
+    <body>
+        <nav>
+            <a class="nav-logo" href="/"
+                ><span>Survival of the </span><em>Funniest</em></a
+            >
+            <div class="nav-right">
+                <a href="/">Home</a>
+                <a href="/explore">Explore</a>
+                <a href="/lifecycle" class="active">How it works</a>
+            </div>
+        </nav>
+
+        <div class="page-hero">
+            <h1>How the <em>Algorithm</em> Labels Every Meme</h1>
+            <p>
+                Draw any interest curve · Adjust thresholds · Every chart and
+                label updates live · No dataset needed
+            </p>
+        </div>
+
+        <div class="outer">
+            <!-- ══ 1. ALGORITHM STEPS ══ -->
+            <div class="sec-title first">
+                Algorithm steps — which fired for your curve?
+            </div>
+            <div class="steps-card">
+                <div class="steps-grid" id="stepsGrid"></div>
+            </div>
+
+            <!-- ══ 2. DRAW ZONE ══ -->
+            <div class="sec-title">Draw your interest curve</div>
+            <div class="draw-zone">
+                <!-- Big canvas card -->
+                <div class="canvas-card">
+                    <div class="canvas-card-head">
+                        <div class="canvas-card-title">
+                            Interest curve editor
+                        </div>
+                        <span
+                            style="
+                                font-size: 0.6rem;
+                                color: var(--muted);
+                                font-family: &quot;Space Mono&quot;, monospace;
+                            "
+                            >click &amp; drag to sculpt</span
+                        >
+                    </div>
+
+                    <!-- Threshold sliders — inside canvas card -->
+                    <div
+                        style="
+                            padding: 0.75rem 1.25rem;
+                            border-bottom: 1px solid var(--border);
+                        "
+                    >
+                        <div
+                            style="
+                                font-size: 0.62rem;
+                                font-weight: 700;
+                                letter-spacing: 0.1em;
+                                text-transform: uppercase;
+                                color: var(--muted);
+                                font-family: &quot;Space Mono&quot;, monospace;
+                                margin-bottom: 0.6rem;
+                            "
+                        >
+                            Threshold controls
+                            <span style="font-weight: 400; opacity: 0.6"
+                                >— % of peak value</span
+                            >
+                        </div>
+                        <div class="sliders-inner">
+                            <div class="slider-row sr-birth">
+                                <div class="slider-label">Birth &gt;</div>
+                                <input
+                                    type="range"
+                                    id="sl_birth"
+                                    min="1"
+                                    max="20"
+                                    value="5"
+                                    oninput="syncSlider('birth', this.value)"
+                                />
+                                <div class="slider-val" id="sv_birth">5%</div>
+                            </div>
+                            <div class="slider-row sr-decay">
+                                <div class="slider-label">Decay &lt;</div>
+                                <input
+                                    type="range"
+                                    id="sl_decay"
+                                    min="30"
+                                    max="80"
+                                    value="50"
+                                    oninput="syncSlider('decay', this.value)"
+                                />
+                                <div class="slider-val" id="sv_decay">50%</div>
+                            </div>
+                            <div class="slider-row sr-death">
+                                <div class="slider-label">Death &lt;</div>
+                                <input
+                                    type="range"
+                                    id="sl_death"
+                                    min="1"
+                                    max="25"
+                                    value="10"
+                                    oninput="syncSlider('death', this.value)"
+                                />
+                                <div class="slider-val" id="sv_death">10%</div>
+                            </div>
+                            <div class="slider-row sr-reborn">
+                                <div class="slider-label">Reborn &gt;</div>
+                                <input
+                                    type="range"
+                                    id="sl_reborn"
+                                    min="10"
+                                    max="60"
+                                    value="30"
+                                    oninput="syncSlider('reborn', this.value)"
+                                />
+                                <div class="slider-val" id="sv_reborn">30%</div>
+                            </div>
+                            <div class="slider-row sr-gap">
+                                <div class="slider-label">Reborn gap</div>
+                                <input
+                                    type="range"
+                                    id="sl_gap"
+                                    min="1"
+                                    max="12"
+                                    value="4"
+                                    oninput="syncSlider('gap', this.value)"
+                                />
+                                <div class="slider-val" id="sv_gap">4mo</div>
+                            </div>
+                        </div>
+                        <div class="sliders-note">
+                            All thresholds are % of the meme's own peak · Reborn
+                            gap = min months after death before revival counts
+                        </div>
+                    </div>
+
+                    <div class="canvas-card-body">
+                        <canvas id="curveCanvas"></canvas>
+                        <div class="edit-hint">
+                            <span>Click &amp; drag to draw any shape</span>
+                            <span>Peak auto-normalises to 100</span>
+                            <span>Thresholds are % of peak value</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Presets panel -->
+                <div class="presets-card">
+                    <div class="presets-card-head">Presets</div>
+                    <div class="presets-list">
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('classic_bell')"
+                        >
+                            🔔 Classic bell
+                        </button>
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('viral_flash')"
+                        >
+                            ⚡ Viral flash
+                        </button>
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('slow_burn')"
+                        >
+                            🔥 Slow burn
+                        </button>
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('flat_dead')"
+                        >
+                            💀 Flat dead
+                        </button>
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('reborn')"
+                        >
+                            ♻ Reborn
+                        </button>
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('evergreen')"
+                        >
+                            🌿 Evergreen
+                        </button>
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('long_lived')"
+                        >
+                            📈 Long lived
+                        </button>
+                        <button
+                            class="preset-btn"
+                            onclick="loadPreset('double_peak')"
+                        >
+                            〰 Double peak
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- /draw-zone -->
+
+            <!-- ══ 3. RESULT + TIMELINE ══ -->
+            <div class="sec-title">Result &amp; timeline</div>
+            <div class="output-row">
+                <!-- Result card -->
+                <div class="result-card" id="resultCard">
+                    <div class="result-label-wrap">
+                        <div class="result-label-tag">Label</div>
+                        <div class="result-label-big" id="resultLabel">—</div>
+                        <div class="result-tier" id="resultTier">tier: —</div>
+                    </div>
+                    <div class="result-desc" id="resultDesc">
+                        Draw a curve or pick a preset to see the label.
+                    </div>
+                    <div class="result-stats" id="resultStats"></div>
+                </div>
+
+                <!-- Timeline chart -->
+                <div class="chart-box">
+                    <div class="chart-title">
+                        Interest timeline — coloured by lifecycle phase ·
+                        threshold lines &amp; event markers shown
+                    </div>
+                    <div style="position: relative; height: 240px">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                    <div class="thresh-legend" id="threshLegend"></div>
+                </div>
+            </div>
+            <!-- /output-row -->
+
+            <!-- ══ 5. MINI CHARTS ══ -->
+            <div class="sec-title">Phase breakdown</div>
+            <div class="g3">
+                <div class="chart-box">
+                    <div class="mini-title">Phase distribution</div>
+                    <div style="position: relative; height: 180px">
+                        <canvas id="phaseDonut"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="mini-title">Avg interest by phase</div>
+                    <div style="position: relative; height: 180px">
+                        <canvas id="phaseBar"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="mini-title">Normalised (% of peak)</div>
+                    <div style="position: relative; height: 180px">
+                        <canvas id="normLine"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ 6. THRESHOLD TABLE ══ -->
+            <div class="sec-title">All label thresholds — priority order</div>
+            <div class="chart-box" style="padding: 0; overflow: hidden">
+                <div
+                    style="
+                        padding: 0.85rem 1.25rem;
+                        border-bottom: 1px solid var(--border);
+                    "
+                >
+                    <div class="chart-title" style="margin-bottom: 0">
+                        First match wins · current label highlighted
+                    </div>
+                </div>
+                <div
+                    style="padding: 0.25rem 1.25rem 0.75rem"
+                    id="threshTable"
+                ></div>
+            </div>
+        </div>
+        <!-- /outer -->
+
+        <script>
+            /* ══════════════════════════ CONSTANTS ══════════════════════════ */
+            const N = 60;
+
+            const PHASE_COLORS = {
+                pre_birth: "#444654",
+                growth: "#1DD1A1",
+                peak: "#FECA57",
+                post_peak: "#FF9F43",
+                decay: "#FF6B6B",
+                dead: "#636E72",
+                reborn: "#A29BFE",
+            };
+
+            const LABEL_META = {
+                reborn: {
+                    color: "#A29BFE",
+                    tier: "phoenix",
+                    desc: "Died then revived — death found + spike above reborn threshold after the minimum gap.",
+                },
+                dead: {
+                    color: "#FF6B6B",
+                    tier: "extinct",
+                    desc: "Clearly dead — fell below the death threshold with no valid comeback detected.",
+                },
+                evergreen: {
+                    color: "#FECA57",
+                    tier: "immortal",
+                    desc: "Never died AND alive for more than 260 months (≈21.7 years). Truly timeless.",
+                },
+                long_lived: {
+                    color: "#74B9FF",
+                    tier: "survivor",
+                    desc: "Never died AND alive 104–260 months (≈8.7–21.7 years). Built to last.",
+                },
+                moderate: {
+                    color: "#FF9F43",
+                    tier: "fading",
+                    desc: "Never died AND alive 26–104 months (≈2.2–8.7 years). Had a decent run.",
+                },
+                short_lived: {
+                    color: "#48DBFB",
+                    tier: "flash",
+                    desc: "Never died AND lifespan ≤ 26 months (≈2.2 years). Burned bright, faded fast.",
+                },
+            };
+
+            /* ══════════════════════════ STATE ══════════════════════════════ */
+            let rawCurve = new Array(N).fill(0);
+            let thresholds = {
+                birth: 5,
+                decay: 50,
+                death: 10,
+                reborn: 30,
+                gap: 4,
+            };
+            let isDrawing = false;
+
+            /* ══════════════════════════ PRESETS ════════════════════════════ */
+            function makeBell({
+                rampLen,
+                peakAt,
+                decayLen,
+                floor = 0,
+                noise = 2,
+            }) {
+                const a = new Array(N).fill(0);
+                const pi = Math.round(peakAt * N);
+                for (let i = 0; i < N; i++) {
+                    let v = 0;
+                    if (i >= pi - rampLen && i <= pi)
+                        v = 100 * ((i - (pi - rampLen)) / rampLen);
+                    else if (i > pi) v = 100 * Math.exp(-((i - pi) / decayLen));
+                    v = Math.max(floor, v + (Math.random() - 0.5) * noise * 2);
+                    a[i] = Math.round(Math.min(100, Math.max(0, v)));
+                }
+                return a;
+            }
+
+            const PRESETS = {
+                classic_bell: () =>
+                    makeBell({
+                        rampLen: 12,
+                        peakAt: 0.4,
+                        decayLen: 12,
+                        floor: 0,
+                    }),
+                viral_flash: () =>
+                    makeBell({
+                        rampLen: 2,
+                        peakAt: 0.15,
+                        decayLen: 5,
+                        floor: 0,
+                    }),
+                slow_burn: () =>
+                    makeBell({
+                        rampLen: 22,
+                        peakAt: 0.6,
+                        decayLen: 14,
+                        floor: 5,
+                    }),
+                flat_dead: () =>
+                    makeBell({
+                        rampLen: 3,
+                        peakAt: 0.1,
+                        decayLen: 3,
+                        floor: 0,
+                    }),
+                reborn() {
+                    const a = makeBell({
+                        rampLen: 8,
+                        peakAt: 0.25,
+                        decayLen: 4,
+                        floor: 0,
+                    });
+                    for (let i = 40; i < 53; i++)
+                        a[i] = Math.round(
+                            Math.min(
+                                100,
+                                36 +
+                                    (56 - Math.abs(i - 46)) * 4 +
+                                    Math.random() * 3,
+                            ),
+                        );
+                    return a;
+                },
+                evergreen: () =>
+                    Array.from({ length: N }, (_, i) =>
+                        Math.round(
+                            Math.max(
+                                8,
+                                62 -
+                                    i * 0.25 +
+                                    Math.sin(i / 5) * 9 +
+                                    Math.random() * 4,
+                            ),
+                        ),
+                    ),
+                long_lived: () =>
+                    makeBell({
+                        rampLen: 10,
+                        peakAt: 0.4,
+                        decayLen: 22,
+                        floor: 13,
+                    }),
+                double_peak: () =>
+                    Array.from({ length: N }, (_, i) => {
+                        const p1 = 100 * Math.exp(-((i - 14) ** 2) / 55),
+                            p2 = 65 * Math.exp(-((i - 40) ** 2) / 80);
+                        return Math.round(
+                            Math.min(
+                                100,
+                                Math.max(
+                                    0,
+                                    p1 + p2 + (Math.random() - 0.5) * 3,
+                                ),
+                            ),
+                        );
+                    }),
+            };
+
+            function loadPreset(name) {
+                rawCurve = PRESETS[name]?.() ?? rawCurve;
+                normPeak();
+                update();
+                redrawCanvas();
+            }
+            function normPeak() {
+                const mx = Math.max(...rawCurve);
+                if (mx > 0 && mx !== 100)
+                    rawCurve = rawCurve.map((v) => Math.round((v / mx) * 100));
+            }
+
+            /* ══════════════════════════ CANVAS ══════════════════════════════ */
+            const cvs = document.getElementById("curveCanvas");
+            const cx = cvs.getContext("2d");
+            let canvasW = 0,
+                canvasH = 0;
+
+            function resizeCanvas() {
+                const r = cvs.getBoundingClientRect();
+                if (r.width === 0) return;
+                const dpr = window.devicePixelRatio || 1;
+                cvs.width = r.width * dpr;
+                cvs.height = r.height * dpr;
+                cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                canvasW = r.width;
+                canvasH = r.height;
+            }
+            window.addEventListener("resize", () => {
+                resizeCanvas();
+                redrawCanvas();
+            });
+
+            function pt(e) {
+                const r = cvs.getBoundingClientRect();
+                return {
+                    x: (e.touches ? e.touches[0].clientX : e.clientX) - r.left,
+                    y: (e.touches ? e.touches[0].clientY : e.clientY) - r.top,
+                };
+            }
+            function paint(p, prev) {
+                const idx = Math.max(
+                    0,
+                    Math.min(N - 1, Math.round((p.x / canvasW) * (N - 1))),
+                );
+                const val = Math.max(
+                    0,
+                    Math.min(100, Math.round((1 - p.y / canvasH) * 100)),
+                );
+                rawCurve[idx] = val;
+                // fill gap between previous and current index
+                if (prev !== null && Math.abs(idx - prev.idx) > 1) {
+                    const d = idx > prev.idx ? 1 : -1;
+                    for (let i = prev.idx + d; i !== idx; i += d) {
+                        const t = (i - prev.idx) / (idx - prev.idx);
+                        rawCurve[i] = Math.round(
+                            prev.val + t * (val - prev.val),
+                        );
+                    }
+                }
+                return { idx, val };
+            }
+            let _prev = null;
+            cvs.addEventListener("mousedown", (e) => {
+                isDrawing = true;
+                _prev = null;
+                _prev = paint(pt(e), null);
+                redrawCanvas();
+            });
+            cvs.addEventListener("mousemove", (e) => {
+                if (!isDrawing) return;
+                _prev = paint(pt(e), _prev);
+                redrawCanvas();
+                update();
+            });
+            cvs.addEventListener("mouseup", () => {
+                isDrawing = false;
+                normPeak();
+                update();
+                redrawCanvas();
+            });
+            cvs.addEventListener("mouseleave", () => {
+                if (isDrawing) {
+                    isDrawing = false;
+                    normPeak();
+                    update();
+                    redrawCanvas();
+                }
+            });
+            cvs.addEventListener(
+                "touchstart",
+                (e) => {
+                    e.preventDefault();
+                    isDrawing = true;
+                    _prev = null;
+                    _prev = paint(pt(e), null);
+                    redrawCanvas();
+                },
+                { passive: false },
+            );
+            cvs.addEventListener(
+                "touchmove",
+                (e) => {
+                    e.preventDefault();
+                    if (!isDrawing) return;
+                    _prev = paint(pt(e), _prev);
+                    redrawCanvas();
+                    update();
+                },
+                { passive: false },
+            );
+            cvs.addEventListener("touchend", () => {
+                isDrawing = false;
+                normPeak();
+                update();
+                redrawCanvas();
+            });
+
+            function redrawCanvas() {
+                if (!canvasW) return;
+                const W = canvasW,
+                    H = canvasH;
+                cx.clearRect(0, 0, W, H);
+                cx.fillStyle = "#13131a";
+                cx.fillRect(0, 0, W, H);
+
+                // grid lines
+                cx.strokeStyle = "#2a2a3808";
+                cx.lineWidth = 1;
+                for (let i = 1; i < 5; i++) {
+                    const y = H * (i / 5);
+                    cx.beginPath();
+                    cx.moveTo(0, y);
+                    cx.lineTo(W, y);
+                    cx.stroke();
+                }
+
+                // threshold h-lines
+                const hl = (pct, color, lbl) => {
+                    const y = H * (1 - pct / 100);
+                    cx.save();
+                    cx.strokeStyle = color + "99";
+                    cx.lineWidth = 1;
+                    cx.setLineDash([5, 5]);
+                    cx.beginPath();
+                    cx.moveTo(0, y);
+                    cx.lineTo(W, y);
+                    cx.stroke();
+                    cx.setLineDash([]);
+                    cx.fillStyle = color;
+                    cx.font = "700 9px 'Space Mono',monospace";
+                    cx.fillText(lbl, 4, y - 3);
+                    cx.restore();
+                };
+                hl(thresholds.birth, "#1DD1A1", `birth >${thresholds.birth}%`);
+                hl(thresholds.decay, "#FF9F43", `decay <${thresholds.decay}%`);
+                hl(thresholds.death, "#FF6B6B", `death <${thresholds.death}%`);
+                hl(
+                    thresholds.reborn,
+                    "#A29BFE",
+                    `reborn >${thresholds.reborn}%`,
+                );
+
+                // fill
+                cx.beginPath();
+                for (let i = 0; i < N; i++) {
+                    const x = (i / (N - 1)) * W,
+                        y = H * (1 - rawCurve[i] / 100);
+                    i === 0 ? cx.moveTo(x, y) : cx.lineTo(x, y);
+                }
+                cx.lineTo(W, H);
+                cx.lineTo(0, H);
+                cx.closePath();
+                const g = cx.createLinearGradient(0, 0, 0, H);
+                g.addColorStop(0, "#feca5738");
+                g.addColorStop(1, "#feca5706");
+                cx.fillStyle = g;
+                cx.fill();
+
+                // line
+                cx.beginPath();
+                for (let i = 0; i < N; i++) {
+                    const x = (i / (N - 1)) * W,
+                        y = H * (1 - rawCurve[i] / 100);
+                    i === 0 ? cx.moveTo(x, y) : cx.lineTo(x, y);
+                }
+                cx.strokeStyle = "#feca57cc";
+                cx.lineWidth = 2;
+                cx.stroke();
+
+                // peak dot
+                const pi = rawCurve.indexOf(Math.max(...rawCurve));
+                cx.beginPath();
+                cx.arc(
+                    (pi / (N - 1)) * W,
+                    H * (1 - rawCurve[pi] / 100),
+                    4.5,
+                    0,
+                    Math.PI * 2,
+                );
+                cx.fillStyle = "#feca57";
+                cx.fill();
+            }
+
+            /* ══════════════════════════ ALGORITHM ═══════════════════════════
+   Exact port of _lifecycle_metrics() from meme_collector.py
+═══════════════════════════════════════════════════════════════ */
+            function runAlgo(vals) {
+                const n = vals.length,
+                    mx = Math.max(...vals);
+                if (mx === 0) return null;
+
+                const norm = vals.map((v) => v / mx);
+                const peakI = vals.indexOf(mx);
+                const bT = thresholds.birth / 100,
+                    dT = thresholds.decay / 100,
+                    xT = thresholds.death / 100,
+                    rT = thresholds.reborn / 100,
+                    gap = thresholds.gap;
+
+                // Step 1 Birth: first idx where norm > birth threshold
+                const birthI = norm.findIndex((v) => v > bT);
+                const bI = birthI < 0 ? 0 : birthI;
+
+                // Step 2 Decay start: first idx >= peak where norm < decay threshold
+                let decayI = n - 1;
+                for (let i = peakI; i < n; i++) {
+                    if (norm[i] < dT) {
+                        decayI = i;
+                        break;
+                    }
+                }
+
+                // Step 3 Death: first idx >= decayI where norm < death threshold
+                let deathI = null;
+                for (let i = decayI; i < n; i++) {
+                    if (norm[i] < xT) {
+                        deathI = i;
+                        break;
+                    }
+                }
+
+                // Step 4 Reborn: first idx >= deathI+gap where norm > reborn threshold
+                let rebornI = null;
+                if (deathI !== null) {
+                    for (let i = deathI + gap; i < n; i++) {
+                        if (norm[i] > rT) {
+                            rebornI = i;
+                            break;
+                        }
+                    }
+                }
+
+                const lifespan = (deathI ?? n - 1) - bI;
+                const riseSpd = (mx / Math.max(peakI - bI, 1)).toFixed(1);
+                const decaySpd = (
+                    mx / Math.max((deathI ?? n - 1) - peakI, 1)
+                ).toFixed(1);
+
+                // Label priority order — matches collector exactly
+                let label;
+                if (deathI !== null && rebornI !== null) label = "reborn";
+                else if (deathI !== null) label = "dead";
+                else if (lifespan > 260) label = "evergreen";
+                else if (lifespan > 104) label = "long_lived";
+                else if (lifespan > 26) label = "moderate";
+                else label = "short_lived";
+
+                // Phase per data point
+                const phases = vals.map((_, i) => {
+                    if (i < bI) return "pre_birth";
+                    if (bI <= i && i < peakI) return "growth";
+                    if (i === peakI) return "peak";
+                    if (deathI !== null && i >= deathI)
+                        return rebornI !== null && i >= rebornI
+                            ? "reborn"
+                            : "dead";
+                    if (i > peakI && i < decayI) return "post_peak";
+                    return "decay";
+                });
+
+                return {
+                    norm,
+                    peakVal: mx,
+                    peakI,
+                    birthI: bI,
+                    decayI,
+                    deathI,
+                    rebornI,
+                    lifespan,
+                    riseSpd,
+                    decaySpd,
+                    label,
+                    phases,
+                    bT,
+                    dT,
+                    xT,
+                    rT,
+                };
+            }
+
+            /* ══════════════════════════ CHARTS ═════════════════════════════ */
+            let cTL = null,
+                cDo = null,
+                cBa = null,
+                cNo = null;
+
+            const TIP = {
+                backgroundColor: "#1a1a24",
+                borderColor: "#2a2a38",
+                borderWidth: 1,
+                titleColor: "#f0f0f8",
+                bodyColor: "#7a7a9a",
+                titleFont: { family: "Syne", weight: "bold", size: 11 },
+                bodyFont: { family: "Space Mono", size: 10 },
+                padding: 10,
+            };
+            const SX = {
+                ticks: {
+                    color: "#7a7a9a",
+                    font: { family: "Space Mono", size: 9 },
+                    maxRotation: 0,
+                    autoSkip: true,
+                    maxTicksLimit: 10,
+                },
+                grid: { color: "#2a2a38" },
+            };
+            const SY = {
+                ticks: {
+                    color: "#7a7a9a",
+                    font: { family: "Space Mono", size: 9 },
+                },
+                grid: { color: "#2a2a38" },
+                min: 0,
+            };
+
+            /* ── UPDATE ENTRY ── */
+            function update() {
+                const r = runAlgo(rawCurve);
+                if (!r) return;
+                doResult(r);
+                doTimeline(r);
+                doMini(r);
+                doSteps(r);
+                doTable(r);
+                doLegend(r);
+            }
+
+            /* ── RESULT ── */
+            function doResult(r) {
+                const m = LABEL_META[r.label],
+                    c = m.color;
+                document.getElementById("resultCard").style.borderColor =
+                    c + "66";
+                const el = document.getElementById("resultLabel");
+                el.textContent = r.label.replace(/_/g, " ");
+                el.style.color = c;
+                document.getElementById("resultTier").innerHTML =
+                    `tier: <span style="color:${c}">${m.tier}</span>`;
+                document.getElementById("resultDesc").textContent = m.desc;
+                document.getElementById("resultStats").innerHTML = [
+                    ["Peak", r.peakVal],
+                    ["Lifespan", r.lifespan + " mo"],
+                    ["Rise", r.riseSpd + "/mo"],
+                    ["Decay", r.decaySpd + "/mo"],
+                    ["Reborn", r.rebornI !== null ? "Yes" : "No"],
+                ]
+                    .map(
+                        ([
+                            l,
+                            v,
+                        ]) => `<span class="rstat" style="border-color:${c}33;color:${c};background:${c}0d">
+    <span style="color:var(--muted)">${l}: </span>${v}</span>`,
+                    )
+                    .join("");
+            }
+
+            /* ── TIMELINE ── */
+            function doTimeline(r) {
+                const L = Array.from({ length: N }, (_, i) => `M${i + 1}`);
+                if (cTL) cTL.destroy();
+                cTL = new Chart(document.getElementById("timelineChart"), {
+                    type: "line",
+                    data: {
+                        labels: L,
+                        datasets: [
+                            {
+                                label: "Interest",
+                                data: rawCurve,
+                                borderColor: "#feca57",
+                                borderWidth: 2.5,
+                                pointRadius: 0,
+                                pointHoverRadius: 4,
+                                fill: true,
+                                backgroundColor: "transparent",
+                                tension: 0.3,
+                                segment: {
+                                    borderColor: (ctx) =>
+                                        PHASE_COLORS[
+                                            r.phases[ctx.p1DataIndex]
+                                        ] || "#888",
+                                },
+                                order: 1,
+                            },
+                            {
+                                label: `Birth >${thresholds.birth}% (=${(r.peakVal * r.bT).toFixed(1)})`,
+                                data: Array(N).fill(r.peakVal * r.bT),
+                                borderColor: "#1DD1A1",
+                                borderWidth: 1.5,
+                                borderDash: [6, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                order: 2,
+                            },
+                            {
+                                label: `Decay <${thresholds.decay}% (=${(r.peakVal * r.dT).toFixed(1)})`,
+                                data: Array(N).fill(r.peakVal * r.dT),
+                                borderColor: "#FF9F43",
+                                borderWidth: 1.5,
+                                borderDash: [6, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                order: 2,
+                            },
+                            {
+                                label: `Death <${thresholds.death}% (=${(r.peakVal * r.xT).toFixed(1)})`,
+                                data: Array(N).fill(r.peakVal * r.xT),
+                                borderColor: "#FF6B6B",
+                                borderWidth: 1.5,
+                                borderDash: [6, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                order: 2,
+                            },
+                            {
+                                label: `Reborn >${thresholds.reborn}% (=${(r.peakVal * r.rT).toFixed(1)})`,
+                                data: Array(N).fill(r.peakVal * r.rT),
+                                borderColor: "#A29BFE",
+                                borderWidth: 1.5,
+                                borderDash: [6, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                order: 2,
+                            },
+                            {
+                                label: "Peak",
+                                data: rawCurve.map((v, i) =>
+                                    i === r.peakI ? v : null,
+                                ),
+                                borderColor: "#FECA57",
+                                backgroundColor: "#FECA57",
+                                pointRadius: rawCurve.map((_, i) =>
+                                    i === r.peakI ? 9 : 0,
+                                ),
+                                pointStyle: "star",
+                                fill: false,
+                                showLine: false,
+                                order: 0,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: "index", intersect: false },
+                        plugins: {
+                            legend: {
+                                position: "bottom",
+                                labels: {
+                                    color: "#7a7a9a",
+                                    font: { family: "Space Mono", size: 9 },
+                                    boxWidth: 10,
+                                    boxHeight: 2,
+                                    padding: 8,
+                                    filter: (i) => i.datasetIndex >= 1,
+                                },
+                            },
+                            tooltip: {
+                                ...TIP,
+                                filter: (i) => i.datasetIndex === 0,
+                                callbacks: {
+                                    label: (i) => [
+                                        ` interest: ${i.raw}`,
+                                        ` phase: ${r.phases[i.dataIndex]?.replace(/_/g, " ") || ""}`,
+                                        ` norm: ${(r.norm[i.dataIndex] * 100).toFixed(1)}%`,
+                                    ],
+                                },
+                            },
+                        },
+                        scales: {
+                            x: SX,
+                            y: { ...SY, max: Math.ceil(r.peakVal * 1.1) },
+                        },
+                    },
+                    plugins: [
+                        {
+                            id: "bands",
+                            beforeDraw(chart) {
+                                const {
+                                    ctx,
+                                    scales: { x, y },
+                                } = chart;
+                                if (!x || !y) return;
+                                let cur = null,
+                                    x1 = null;
+                                r.phases.forEach((ph, i) => {
+                                    const px = x.getPixelForValue(i);
+                                    if (ph !== cur) {
+                                        if (cur && x1 !== null) {
+                                            ctx.save();
+                                            ctx.fillStyle =
+                                                (PHASE_COLORS[cur] || "#888") +
+                                                "18";
+                                            ctx.fillRect(
+                                                x1,
+                                                y.top,
+                                                px - x1,
+                                                y.bottom - y.top,
+                                            );
+                                            ctx.restore();
+                                        }
+                                        cur = ph;
+                                        x1 = px;
+                                    }
+                                });
+                                if (cur && x1 !== null) {
+                                    ctx.save();
+                                    ctx.fillStyle =
+                                        (PHASE_COLORS[cur] || "#888") + "18";
+                                    ctx.fillRect(
+                                        x1,
+                                        y.top,
+                                        x.right - x1,
+                                        y.bottom - y.top,
+                                    );
+                                    ctx.restore();
+                                }
+                            },
+                        },
+                        {
+                            id: "vlines",
+                            afterDraw(chart) {
+                                const {
+                                    ctx,
+                                    scales: { x, y },
+                                } = chart;
+                                if (!x || !y) return;
+                                [
+                                    { i: r.birthI, c: "#1DD1A1", t: "BIRTH" },
+                                    { i: r.peakI, c: "#FECA57", t: "PEAK" },
+                                    { i: r.decayI, c: "#FF9F43", t: "DECAY" },
+                                    { i: r.deathI, c: "#FF6B6B", t: "DEATH" },
+                                    { i: r.rebornI, c: "#A29BFE", t: "REBORN" },
+                                ].forEach((ev) => {
+                                    if (ev.i === null || ev.i === undefined)
+                                        return;
+                                    const px = x.getPixelForValue(ev.i);
+                                    ctx.save();
+                                    ctx.strokeStyle = ev.c + "bb";
+                                    ctx.lineWidth = 1.5;
+                                    ctx.setLineDash([4, 4]);
+                                    ctx.beginPath();
+                                    ctx.moveTo(px, y.top);
+                                    ctx.lineTo(px, y.bottom);
+                                    ctx.stroke();
+                                    ctx.setLineDash([]);
+                                    ctx.fillStyle = ev.c;
+                                    ctx.font = "700 8px 'Space Mono',monospace";
+                                    ctx.textAlign = "center";
+                                    ctx.fillText(ev.t, px, y.top - 4);
+                                    ctx.restore();
+                                });
+                            },
+                        },
+                    ],
+                });
+            }
+
+            /* ── MINI CHARTS ── */
+            function doMini(r) {
+                // Donut
+                const pc = {};
+                r.phases.forEach((p) => {
+                    pc[p] = (pc[p] || 0) + 1;
+                });
+                const pk = Object.keys(pc);
+                if (cDo) cDo.destroy();
+                cDo = new Chart(document.getElementById("phaseDonut"), {
+                    type: "doughnut",
+                    data: {
+                        labels: pk.map((p) => p.replace(/_/g, " ")),
+                        datasets: [
+                            {
+                                data: pk.map((p) => pc[p]),
+                                backgroundColor: pk.map(
+                                    (p) => (PHASE_COLORS[p] || "#888") + "cc",
+                                ),
+                                borderColor: "#1a1a24",
+                                borderWidth: 3,
+                                hoverOffset: 6,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: "62%",
+                        plugins: {
+                            legend: {
+                                position: "bottom",
+                                labels: {
+                                    color: "#7a7a9a",
+                                    font: { family: "Space Mono", size: 8 },
+                                    boxWidth: 7,
+                                    boxHeight: 7,
+                                    padding: 5,
+                                },
+                            },
+                            tooltip: {
+                                ...TIP,
+                                callbacks: {
+                                    label: (i) => ` ${i.label}: ${i.raw} mo`,
+                                },
+                            },
+                        },
+                    },
+                });
+
+                // Bar
+                const pv = {};
+                r.phases.forEach((p, i) => {
+                    if (!pv[p]) pv[p] = [];
+                    pv[p].push(rawCurve[i]);
+                });
+                const pbk = Object.keys(pv);
+                if (cBa) cBa.destroy();
+                cBa = new Chart(document.getElementById("phaseBar"), {
+                    type: "bar",
+                    data: {
+                        labels: pbk.map((p) => p.replace(/_/g, " ")),
+                        datasets: [
+                            {
+                                data: pbk.map((p) =>
+                                    Math.round(
+                                        pv[p].reduce((a, b) => a + b, 0) /
+                                            pv[p].length,
+                                    ),
+                                ),
+                                backgroundColor: pbk.map(
+                                    (p) => (PHASE_COLORS[p] || "#888") + "cc",
+                                ),
+                                borderColor: pbk.map(
+                                    (p) => PHASE_COLORS[p] || "#888",
+                                ),
+                                borderWidth: 1.5,
+                                borderRadius: 4,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { ...TIP },
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: "#7a7a9a",
+                                    font: { family: "Space Mono", size: 7 },
+                                    maxRotation: 35,
+                                },
+                                grid: { color: "#2a2a38" },
+                            },
+                            y: { ...SY },
+                        },
+                    },
+                });
+
+                // Norm line
+                if (cNo) cNo.destroy();
+                cNo = new Chart(document.getElementById("normLine"), {
+                    type: "line",
+                    data: {
+                        labels: Array.from(
+                            { length: N },
+                            (_, i) => `M${i + 1}`,
+                        ),
+                        datasets: [
+                            {
+                                label: "norm",
+                                data: r.norm.map((v) => +(v * 100).toFixed(1)),
+                                borderColor: "#feca57",
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                fill: true,
+                                backgroundColor: "#feca570d",
+                                tension: 0.3,
+                                segment: {
+                                    borderColor: (ctx) =>
+                                        PHASE_COLORS[
+                                            r.phases[ctx.p1DataIndex]
+                                        ] || "#888",
+                                },
+                            },
+                            {
+                                data: Array(N).fill(+(r.bT * 100).toFixed(1)),
+                                borderColor: "#1DD1A1",
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                label: `birth ${thresholds.birth}%`,
+                            },
+                            {
+                                data: Array(N).fill(+(r.xT * 100).toFixed(1)),
+                                borderColor: "#FF6B6B",
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                label: `death ${thresholds.death}%`,
+                            },
+                            {
+                                data: Array(N).fill(+(r.rT * 100).toFixed(1)),
+                                borderColor: "#A29BFE",
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                label: `reborn ${thresholds.reborn}%`,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: "bottom",
+                                labels: {
+                                    color: "#7a7a9a",
+                                    font: { family: "Space Mono", size: 8 },
+                                    boxWidth: 7,
+                                    boxHeight: 1,
+                                    padding: 5,
+                                    filter: (i) => i.datasetIndex > 0,
+                                },
+                            },
+                            tooltip: {
+                                ...TIP,
+                                filter: (i) => i.datasetIndex === 0,
+                            },
+                        },
+                        scales: {
+                            x: { display: false },
+                            y: {
+                                ...SY,
+                                max: 105,
+                                ticks: {
+                                    ...SY.ticks,
+                                    callback: (v) => `${v}%`,
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+
+            /* ── STEPS GRID ── */
+            function doSteps(r) {
+                const steps = [
+                    {
+                        num: "Step 1",
+                        name: "Birth",
+                        color: "#1DD1A1",
+                        formula: `norm[i] > ${thresholds.birth}%`,
+                        result: `index ${r.birthI} → month ${r.birthI + 1}`,
+                        active: true,
+                    },
+                    {
+                        num: "Step 2",
+                        name: "Peak",
+                        color: "#FECA57",
+                        formula: "max(values)",
+                        result: `index ${r.peakI} — value = ${r.peakVal}`,
+                        active: true,
+                    },
+                    {
+                        num: "Step 3",
+                        name: "Decay start",
+                        color: "#FF9F43",
+                        formula: `norm[i] < ${thresholds.decay}% (≥ peak)`,
+                        result: `index ${r.decayI}`,
+                        active: true,
+                    },
+                    {
+                        num: "Step 4",
+                        name: "Death",
+                        color: "#FF6B6B",
+                        formula: `norm[i] < ${thresholds.death}% (≥ decay)`,
+                        result:
+                            r.deathI !== null
+                                ? `index ${r.deathI} → month ${r.deathI + 1}`
+                                : "Never died — still alive",
+                        active: r.deathI !== null,
+                    },
+                    {
+                        num: "Step 5",
+                        name: "Reborn",
+                        color: "#A29BFE",
+                        formula: `norm[i] > ${thresholds.reborn}% (gap ≥${thresholds.gap})`,
+                        result:
+                            r.rebornI !== null
+                                ? `index ${r.rebornI} → month ${r.rebornI + 1}`
+                                : r.deathI !== null
+                                  ? "No revival found"
+                                  : "Death required first",
+                        active: r.deathI !== null,
+                    },
+                    {
+                        num: "Result",
+                        name: r.label.replace(/_/g, " "),
+                        color: LABEL_META[r.label].color,
+                        formula: `lifespan = ${r.lifespan} months`,
+                        result: `tier: ${LABEL_META[r.label].tier}`,
+                        active: true,
+                    },
+                ];
+                document.getElementById("stepsGrid").innerHTML = steps
+                    .map(
+                        (s) => `
+    <div class="step-box ${s.active ? "active" : "inactive"}" style="border-color:${s.color}33;background:${s.color}0a">
+      <div class="sb-num"  style="color:${s.color}">${s.num}</div>
+      <div class="sb-name" style="color:${s.color}">${s.name}</div>
+      <div class="sb-formula">${s.formula}</div>
+      <div class="sb-result" style="color:${s.active ? s.color : "var(--muted)"}">${s.result}</div>
+    </div>`,
+                    )
+                    .join("");
+            }
+
+            /* ── THRESH LEGEND ── */
+            function doLegend(r) {
+                document.getElementById("threshLegend").innerHTML = [
+                    {
+                        c: "#1DD1A1",
+                        l: `Birth >${thresholds.birth}% = ${(r.peakVal * r.bT).toFixed(1)}`,
+                    },
+                    {
+                        c: "#FF9F43",
+                        l: `Decay <${thresholds.decay}% = ${(r.peakVal * r.dT).toFixed(1)}`,
+                    },
+                    {
+                        c: "#FF6B6B",
+                        l: `Death <${thresholds.death}% = ${(r.peakVal * r.xT).toFixed(1)}`,
+                    },
+                    {
+                        c: "#A29BFE",
+                        l: `Reborn >${thresholds.reborn}% = ${(r.peakVal * r.rT).toFixed(1)}`,
+                    },
+                ]
+                    .map(
+                        (
+                            it,
+                        ) => `<div class="tl-item"><div class="tl-dash" style="border-color:${it.c}"></div>
+    <span style="color:${it.c}">${it.l}</span></div>`,
+                    )
+                    .join("");
+            }
+
+            /* ── THRESH TABLE ── */
+            function doTable(r) {
+                const cur = r.label.replace(/_/g, " ");
+                const rows = [
+                    {
+                        label: "reborn",
+                        color: "#A29BFE",
+                        lifespan: "—",
+                        cond: "Death found AND revival > reborn% after gap",
+                        badges: [
+                            { t: `death <${thresholds.death}%`, c: "#FF6B6B" },
+                            {
+                                t: `revival >${thresholds.reborn}%`,
+                                c: "#A29BFE",
+                            },
+                            { t: `gap ≥${thresholds.gap}mo`, c: "#7a7a9a" },
+                        ],
+                    },
+                    {
+                        label: "dead",
+                        color: "#FF6B6B",
+                        lifespan: "—",
+                        cond: "Death found, no valid revival above reborn threshold",
+                        badges: [
+                            { t: `norm <${thresholds.death}%`, c: "#FF6B6B" },
+                            { t: "no revival", c: "#636E72" },
+                        ],
+                    },
+                    {
+                        label: "moderate",
+                        color: "#FF9F43",
+                        lifespan: "26–104 mo",
+                        cond: "No death + lifespan 26–104 months (≈ 2.2–8.7 yr)",
+                        badges: [
+                            { t: "no death", c: "#1DD1A1" },
+                            { t: "26 < lifespan ≤ 104", c: "#FF9F43" },
+                        ],
+                    },
+                ];
+                document.getElementById("threshTable").innerHTML = rows
+                    .map((row) => {
+                        const act = row.label === cur;
+                        return `<div class="tt-row" style="${act ? `background:${row.color}0d;border-radius:8px;margin:2px -4px;padding:0.55rem 4px;` : ""}">
+      <div class="tt-dot" style="background:${act ? row.color : row.color + "55"}"></div>
+      <div class="tt-left">
+        <div class="tt-name" style="color:${act ? row.color : "var(--text)"}">${row.label}</div>
+        <div class="tt-lifespan">${row.lifespan}</div>
+      </div>
+      <div class="tt-mid">
+        <div class="tt-cond">${row.cond}</div>
+        <div class="tt-badges">${row.badges
+            .map(
+                (b) => `<span class="tt-badge"
+          style="color:${act ? b.c : b.c + "66"};border-color:${act ? b.c + "44" : b.c + "22"}">${b.t}</span>`,
+            )
+            .join("")}</div>
+      </div>
+      ${act ? `<div class="tt-cur">← current</div>` : ""}
+    </div>`;
+                    })
+                    .join("");
+            }
+
+            /* ══════════════════════════ SLIDER SYNC ════════════════════════ */
+            function syncSlider(key, val) {
+                thresholds[key] = parseInt(val);
+                document.getElementById(`sv_${key}`).textContent =
+                    key === "gap" ? val + "mo" : val + "%";
+                update();
+                redrawCanvas();
+            }
+
+            /* ══════════════════════════ INIT ══════════════════════════════ */
+            resizeCanvas();
+            loadPreset("classic_bell");
+        </script>
+    </body>
+</html>

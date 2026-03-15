@@ -1,0 +1,51 @@
+====================================================================
+  MEME LIFECYCLE DATASET — COLLECTION REPORT
+  Generated : 2026-03-14 10:52 UTC
+====================================================================
+  Memes studied        : 20
+  Weekly trend rows    : 3600
+  Reddit posts         : 500
+  Errors               : 0
+
+  SURVIVAL TIER
+    extinct            10
+    survivor           5
+    fading             4
+    phoenix            1
+
+  LIFECYCLE LABELS
+    dead               10
+    long_lived         5
+    moderate           4
+    reborn             1
+
+  VIRALITY RANKING
+    Surprised Pikachu                     82.8
+    Wojak                                 82.3
+    Rickroll                              80.0
+    Among Us                              80.0
+    Distracted Boyfriend                  78.8
+    Two Buttons                           73.3
+    Pepe The Frog                         71.9
+    Woman Yelling At Cat                  68.5
+    Gru Plan                              68.2
+    Hide The Pain Harold                  64.9
+    Stonks                                60.1
+    This Is Fine Dog                      59.6
+    Nyan Cat                              57.5
+    Coffin Dance                          56.3
+    Mocking Spongebob                     55.6
+    Chad Vs Virgin                        54.7
+    Doge                                  52.8
+    Drake Hotline Bling                   52.3
+    Galaxy Brain                          49.9
+    Trollface                             45.5
+
+  ERRORS
+    None
+
+  FILES
+    meme_dataset_output/meme_lifecycle_dataset.csv
+    meme_dataset_output/meme_weekly_trends.csv
+    meme_dataset_output/meme_reddit_posts.csv
+====================================================================

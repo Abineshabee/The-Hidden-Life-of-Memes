@@ -1,0 +1,1495 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            {% if view == 'detail' %}{{ name }} — {% endif %}Meme Lifecycle
+            Explorer
+        </title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+        <style>
+            :root {
+                --bg: #0a0a0f;
+                --surface: #13131a;
+                --card: #1a1a24;
+                --border: #2a2a38;
+                --text: #f0f0f8;
+                --muted: #7a7a9a;
+                --accent: #feca57;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            html {
+                scroll-behavior: smooth;
+            }
+            body {
+                font-family: "Syne", sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                overflow-x: hidden;
+            }
+
+            /* ── NAV ── */
+            nav {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                background: rgba(10, 10, 15, 0.92);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid var(--border);
+                padding: 0 2rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 60px;
+            }
+            .nav-logo {
+                font-size: 1.1rem;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                color: var(--accent);
+                text-decoration: none;
+            }
+            .nav-logo span {
+                color: var(--text);
+            }
+            .nav-logo em {
+                color: var(--accent);
+                font-style: normal;
+                font-weight: 800;
+            }
+            .nav-right {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+            .nav-right a {
+                font-size: 0.8rem;
+                color: var(--muted);
+                text-decoration: none;
+                padding: 5px 12px;
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                transition: all 0.2s;
+                font-family: "Space Mono", monospace;
+            }
+            .nav-right a:hover {
+                color: var(--text);
+                border-color: var(--accent);
+            }
+
+            /* ── HERO ── */
+            .hero {
+                padding: 5rem 2rem 3rem;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+            .hero::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(
+                    ellipse 80% 60% at 50% -10%,
+                    #feca5722 0%,
+                    transparent 70%
+                );
+                pointer-events: none;
+            }
+            .hero h1 {
+                font-size: clamp(2.5rem, 6vw, 5rem);
+                font-weight: 800;
+                letter-spacing: -0.04em;
+                line-height: 1.05;
+                margin-bottom: 1rem;
+            }
+            .hero h1 em {
+                color: var(--accent);
+                font-style: normal;
+            }
+            .hero p {
+                font-size: 1rem;
+                color: var(--muted);
+                max-width: 520px;
+                margin: 0 auto 2.5rem;
+                line-height: 1.7;
+                font-family: "Space Mono", monospace;
+            }
+            .hero-stats {
+                display: inline-flex;
+                gap: 3rem;
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 1.25rem 2.5rem;
+            }
+            .hstat {
+                text-align: center;
+            }
+            .hstat .n {
+                font-size: 1.8rem;
+                font-weight: 800;
+                color: var(--accent);
+            }
+            .hstat .l {
+                font-size: 0.7rem;
+                color: var(--muted);
+                margin-top: 2px;
+                font-family: "Space Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            /* ── COMPARE SECTION ── */
+            .section {
+                padding: 2.5rem 2rem;
+                max-width: 1100px;
+                margin: 0 auto;
+            }
+            .section-title {
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 1.25rem;
+                font-family: "Space Mono", monospace;
+            }
+            .chart-box {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            .chart-box canvas {
+                display: block;
+            }
+
+            /* ── MEME GRID ── */
+            .meme-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 1rem;
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 0 2rem 4rem;
+            }
+            .meme-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 1.25rem 1.25rem 1rem;
+                cursor: pointer;
+                text-decoration: none;
+                color: inherit;
+                transition:
+                    transform 0.2s,
+                    border-color 0.2s,
+                    box-shadow 0.2s;
+                display: block;
+                position: relative;
+                overflow: hidden;
+            }
+            .meme-card::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: var(--c);
+                border-radius: 16px 16px 0 0;
+            }
+            .meme-card:hover {
+                transform: translateY(-4px);
+                border-color: var(--c);
+                box-shadow: 0 12px 40px -8px
+                    color-mix(in srgb, var(--c) 30%, transparent);
+            }
+            .card-name {
+                font-size: 0.95rem;
+                font-weight: 700;
+                margin-bottom: 0.6rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .card-meta {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0.75rem;
+            }
+            .card-peak {
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: var(--c);
+            }
+            .card-label {
+                font-size: 0.65rem;
+                padding: 3px 9px;
+                border-radius: 20px;
+                font-family: "Space Mono", monospace;
+                font-weight: 700;
+                text-transform: uppercase;
+                background: color-mix(in srgb, var(--c) 18%, transparent);
+                color: var(--c);
+                border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+            }
+            .sparkline-wrap {
+                height: 36px;
+            }
+            .card-date {
+                font-size: 0.65rem;
+                color: var(--muted);
+                margin-top: 0.5rem;
+                font-family: "Space Mono", monospace;
+            }
+
+            /* ── DETAIL VIEW ── */
+            .detail-hero {
+                padding: 2.5rem 2rem 1.5rem;
+                max-width: 1100px;
+                margin: 0 auto;
+                border-bottom: 1px solid var(--border);
+            }
+            .detail-nav {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 1.5rem;
+            }
+            .detail-nav a {
+                font-size: 0.75rem;
+                color: var(--muted);
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-family: "Space Mono", monospace;
+                transition: color 0.2s;
+            }
+            .detail-nav a:hover {
+                color: var(--text);
+            }
+            .detail-name {
+                font-size: clamp(2rem, 5vw, 3.5rem);
+                font-weight: 800;
+                letter-spacing: -0.04em;
+                line-height: 1;
+            }
+            .detail-name span {
+                color: var(--c);
+            }
+            .detail-badge {
+                display: inline-block;
+                margin-top: 0.75rem;
+                font-size: 0.7rem;
+                padding: 4px 14px;
+                border-radius: 20px;
+                font-family: "Space Mono", monospace;
+                font-weight: 700;
+                text-transform: uppercase;
+                background: color-mix(in srgb, var(--c) 18%, transparent);
+                color: var(--c);
+                border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+            }
+
+            /* Stat grid */
+            .stat-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 0.75rem;
+                max-width: 1100px;
+                margin: 1.5rem auto;
+                padding: 0 2rem;
+            }
+            .stat-card {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 1rem;
+            }
+            .stat-card .sv {
+                font-size: 1.5rem;
+                font-weight: 800;
+                color: var(--c);
+                line-height: 1.1;
+            }
+            .stat-card .sl {
+                font-size: 0.65rem;
+                color: var(--muted);
+                margin-top: 4px;
+                font-family: "Space Mono", monospace;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+
+            /* Charts grid */
+            .charts-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 0 2rem 4rem;
+            }
+            .charts-grid .full {
+                grid-column: 1 / -1;
+            }
+            @media (max-width: 680px) {
+                .charts-grid {
+                    grid-template-columns: 1fr;
+                }
+                .charts-grid .full {
+                    grid-column: 1;
+                }
+            }
+
+            /* ── PHASE LEGEND ── */
+            .phase-legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid var(--border);
+            }
+            .ph-dot {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 0.68rem;
+                font-family: "Space Mono", monospace;
+                color: var(--muted);
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+            .ph-dot span {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+
+            /* ── SCROLLBAR ── */
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--bg);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 3px;
+            }
+
+            /* ── TOOLTIP ── */
+            .tooltip-custom {
+                background: var(--card) !important;
+                border: 1px solid var(--border) !important;
+                border-radius: 10px !important;
+                color: var(--text) !important;
+                font-family: "Space Mono", monospace !important;
+                font-size: 11px !important;
+                padding: 8px 12px !important;
+            }
+
+            .kym-btn {
+                display: inline-block;
+                margin-top: 0.75rem;
+                font-size: 0.65rem;
+                padding: 5px 12px;
+                border-radius: 20px;
+                border: 1px solid var(--border);
+                color: var(--muted);
+                text-decoration: none;
+                font-family: "Space Mono", monospace;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+            .kym-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+                background: rgba(254, 202, 87, 0.06);
+            }
+            .kym-inline-btn {
+                font-size: 0.68rem;
+                padding: 5px 14px;
+                border-radius: 20px;
+                border: 1px solid var(--border);
+                color: var(--muted);
+                text-decoration: none;
+                font-family: "Space Mono", monospace;
+                transition: all 0.2s;
+                white-space: nowrap;
+                align-self: center;
+                margin-bottom: 6px;
+            }
+            .kym-inline-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+                background: rgba(254, 202, 87, 0.06);
+            }
+        </style>
+    </head>
+    <body>
+        <!-- NAV -->
+        <nav>
+            <a class="nav-logo" href="/"
+                ><span>Survival of the </span><em>Funniest</em></a
+            >
+            <div class="nav-right">
+                {% if view == 'detail' %}
+                <a href="/">All Memes</a>
+                {% endif %}
+                <a href="/explore">Explore Memes</a>
+                <a href="/lifecycle">How it works</a>
+            </div>
+        </nav>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+     HOME VIEW
+══════════════════════════════════════════════════════════════════ -->
+        {% if view == 'home' %}
+
+        <div class="hero">
+            <h1>The <em>Hidden Life</em><br />of Memes</h1>
+            <p>
+                Tracking virality, decay, and resurrection across internet
+                culture — week by week.
+            </p>
+            <div class="hero-stats">
+                <div class="hstat">
+                    <div class="n">{{ total_memes }}</div>
+                    <div class="l">Memes tracked</div>
+                </div>
+                <div class="hstat">
+                    <div class="n">{{ "{:,}".format(total_weeks) }}</div>
+                    <div class="l">Data points</div>
+                </div>
+                <div class="hstat">
+                    <div class="n">2010–24</div>
+                    <div class="l">Time span</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison chart -->
+        <div class="section">
+            <div class="section-title">
+                Peak interest comparison — all memes
+            </div>
+            <div class="chart-box">
+                <div style="position: relative; height: 320px">
+                    <canvas id="compareChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meme cards grid -->
+        <div style="max-width: 1100px; margin: 0 auto; padding: 0 2rem 1rem">
+            <div class="section-title">
+                Select a meme to explore its lifecycle
+            </div>
+        </div>
+        <div class="meme-grid">
+            {% for c in cards %}
+            <a
+                class="meme-card"
+                href="/meme/{{ c.slug }}"
+                style="--c:{{ c.color }}"
+            >
+                <div class="card-name">{{ c.name }}</div>
+                <div class="card-meta">
+                    <div class="card-peak">{{ c.peak }}</div>
+                    <div class="card-label">{{ c.lifecycle }}</div>
+                </div>
+                <div class="sparkline-wrap">
+                    <canvas id="spark-{{ loop.index }}" height="36"></canvas>
+                </div>
+                <div class="card-date">
+                    Peak: {{ c.peak_date }} &nbsp;·&nbsp; Avg: {{ c.avg }}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        <script>
+            // ── Compare bar chart ──────────────────────────────────────────────────────
+            fetch("/api/compare").then(r=>r.json()).then(data=>{
+              const labels = data.map(d=>d.name);
+              const peaks  = data.map(d=>d.peak);
+              const avgs   = data.map(d=>d.avg);
+              const colors = data.map(d=>d.color);
+
+              new Chart(document.getElementById("compareChart"),{
+                type:"bar",
+                data:{
+                  labels,
+                  datasets:[
+                    {
+                      label:"Peak interest",
+                      data: peaks,
+                      backgroundColor: colors.map(c=>c+"cc"),
+                      borderColor: colors,
+                      borderWidth: 1.5,
+                      borderRadius: 6,
+                    },
+                    {
+                      label:"Avg interest",
+                      data: avgs,
+                      backgroundColor: colors.map(c=>c+"44"),
+                      borderColor: colors.map(c=>c+"88"),
+                      borderWidth: 1,
+                      borderRadius: 6,
+                    }
+                  ]
+                },
+                options:{
+                  responsive:true, maintainAspectRatio:false,
+                  plugins:{
+                    legend:{ labels:{ color:"#7a7a9a", font:{family:"Space Mono",size:11} } },
+                    tooltip:{
+                      callbacks:{
+                        title: items => items[0].label,
+                        label: item => ` ${item.dataset.label}: ${item.raw}`,
+                      },
+                      backgroundColor:"#1a1a24",
+                      borderColor:"#2a2a38",
+                      borderWidth:1,
+                      titleColor:"#f0f0f8",
+                      bodyColor:"#7a7a9a",
+                      titleFont:{family:"Syne",weight:"bold"},
+                      bodyFont:{family:"Space Mono",size:11},
+                    }
+                  },
+                  scales:{
+                    x:{ ticks:{ color:"#7a7a9a", font:{family:"Space Mono",size:10}, maxRotation:45 }, grid:{color:"#2a2a38"} },
+                    y:{ ticks:{ color:"#7a7a9a", font:{family:"Space Mono",size:10} }, grid:{color:"#2a2a38"} }
+                  }
+                }
+              });
+            });
+
+            // ── Sparklines ─────────────────────────────────────────────────────────────
+            const sparks = {{ cards | tojson }};
+            sparks.forEach((c, i) => {
+              const canvas = document.getElementById("spark-"+(i+1));
+              if(!canvas) return;
+              new Chart(canvas, {
+                type:"line",
+                data:{
+                  labels: c.spark.map((_,j)=>j),
+                  datasets:[{
+                    data: c.spark,
+                    borderColor: c.color,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    fill: true,
+                    backgroundColor: c.color+"22",
+                    tension: 0.4,
+                  }]
+                },
+                options:{
+                  responsive:true, maintainAspectRatio:false,
+                  plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+                  scales:{ x:{display:false}, y:{display:false} },
+                  animation:false,
+                }
+              });
+            });
+        </script>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+     DETAIL VIEW
+══════════════════════════════════════════════════════════════════ -->
+        {% elif view == 'detail' %} {% macro fmt_date(d) %} {%- set s = (d or
+        '')|string -%} {%- if s[:4].isdigit() and s[4:5] == '-' -%} {%- set m =
+        s[5:7] -%} {%- set months =
+        {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'}
+        -%} {{ months.get(m, m) }} {{ s[:4] }} {%- elif s and s != 'None' and s
+        != 'nan' -%} {{ s[:7] }} {%- else -%}N/A{%- endif -%} {% endmacro %}
+
+        <style>
+            :root { --c: {{ color }}; }
+            .kym-btn {
+              display: inline-block; margin-top: 0.75rem;
+              font-size: 0.65rem; padding: 5px 12px;
+              border-radius: 20px; border: 1px solid var(--border);
+              color: var(--muted); text-decoration: none;
+              font-family: 'Space Mono', monospace;
+              transition: all .2s; white-space: nowrap;
+            }
+            .kym-btn:hover {
+              border-color: var(--accent); color: var(--accent);
+              background: rgba(254,202,87,.06);
+            }
+            .kym-inline-btn {
+              font-size: 0.68rem; padding: 5px 14px;
+              border-radius: 20px; border: 1px solid var(--border);
+              color: var(--muted); text-decoration: none;
+              font-family: 'Space Mono', monospace;
+              transition: all .2s; white-space: nowrap;
+              align-self: center; margin-bottom: 6px;
+            }
+            .kym-inline-btn:hover {
+              border-color: var(--accent); color: var(--accent);
+              background: rgba(254,202,87,.06);
+            }
+        </style>
+
+        <!-- Detail hero -->
+        <div class="detail-hero">
+            <div class="detail-nav">
+                <a href="/">← All memes</a>
+                <div style="display: flex; gap: 1rem">
+                    <a href="/meme/{{ prev_slug }}">← {{ prev_name }}</a>
+                    <a href="/meme/{{ next_slug }}">{{ next_name }} →</a>
+                </div>
+            </div>
+            <div
+                style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    flex-wrap: wrap;
+                "
+            >
+                <div class="detail-name">{{ name }}<span>.</span></div>
+            </div>
+            <div class="detail-badge">
+                {{ lrow.get('trends_lifecycle_label', 'N/A') }}
+            </div>
+            <div
+                style="
+                    font-size: 0.75rem;
+                    color: var(--muted);
+                    margin-top: 0.75rem;
+                    font-family: &quot;Space Mono&quot;, monospace;
+                "
+            >
+                {{ fmt_date(lrow.get('trends_birth_date')) }} – {{
+                fmt_date(lrow.get('trends_peak_date')) }} &nbsp;·&nbsp; {{
+                lrow.get('trends_lifespan_weeks','N/A') }} weeks lifespan
+            </div>
+            <div
+                style="
+                    display: flex;
+                    align-items: center;
+                    gap: 1.25rem;
+                    margin-top: 1.25rem;
+                    flex-wrap: wrap;
+                "
+            >
+                <img
+                    src="/static/memes/{{ img }}"
+                    alt="{{ name }}"
+                    onerror="this.style.display = 'none'"
+                    style="
+                        width: 120px;
+                        height: 80px;
+                        object-fit: cover;
+                        border-radius: 10px;
+                        border: 2px solid var(--c);
+                        flex-shrink: 0;
+                    "
+                />
+                <a
+                    class="kym-inline-btn"
+                    href="#"
+                    style="cursor: pointer"
+                    onclick="
+                        event.preventDefault();
+                        document.getElementById('meme-modal').style.display =
+                            'flex';
+                    "
+                >
+                    View meme image ↗
+                </a>
+            </div>
+        </div>
+
+        <!-- Full-size image modal -->
+        <div
+            id="meme-modal"
+            style="
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 999;
+                background: rgba(0, 0, 0, 0.85);
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            "
+            onclick="this.style.display = 'none'"
+        >
+            <img
+                src="/static/memes/{{ img }}"
+                alt="{{ name }}"
+                style="
+                    max-width: 90vw;
+                    max-height: 85vh;
+                    border-radius: 12px;
+                    border: 2px solid var(--c);
+                "
+            />
+        </div>
+
+        <!-- Stat cards -->
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="sv">{{ lrow.get('trends_peak_value', 'N/A') }}</div>
+                <div class="sl">Peak interest</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="sv">
+                    {{ fmt_date(lrow.get('trends_peak_date')) }}
+                </div>
+                <div class="sl">Peak date</div>
+            </div>
+            <div class="stat-card">
+                <div class="sv">
+                    {{ fmt_date(lrow.get('trends_birth_date')) }}
+                </div>
+                <div class="sl">Birth date</div>
+            </div>
+            <div class="stat-card">
+                <div class="sv">
+                    {% set dd = lrow.get('trends_death_date') %}{{ fmt_date(dd)
+                    if dd and dd not in ['None','nan',''] else 'Alive' }}
+                </div>
+                <div class="sl">Death date</div>
+            </div>
+            <div class="stat-card">
+                <div class="sv">{{ lrow.get('trends_rise_speed', 'N/A') }}</div>
+                <div class="sl">Rise speed</div>
+            </div>
+            <div class="stat-card">
+                <div class="sv">
+                    {{ lrow.get('trends_decay_speed', 'N/A') }}
+                </div>
+                <div class="sl">Decay speed</div>
+            </div>
+            <div class="stat-card">
+                <div
+                    class="sv"
+                    style="color:{{ 'var(--c)' if lrow.get('trends_was_reborn') in [True, 'True'] else 'var(--muted)' }}"
+                >
+                    {{ 'Yes' if lrow.get('trends_was_reborn') in [True, 'True']
+                    else 'No' }}
+                </div>
+                <div class="sl">Was reborn</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="sv">
+                    {{ lrow.get('reddit_community_count', 'N/A') }}
+                </div>
+                <div class="sl">Communities</div>
+            </div>
+            <div class="stat-card">
+                <div class="sv">
+                    {{ lrow.get('kym_platform_count', 'N/A') }}
+                </div>
+                <div class="sl">Platforms spread</div>
+            </div>
+        </div>
+
+        <!-- Phase legend -->
+        <div
+            class="phase-legend"
+            style="max-width: 1100px; margin: 0 auto 1rem; padding: 0 2rem"
+        >
+            {% for ph, col in phase_colors.items() %} {% if ph in phases_dist %}
+            <div class="ph-dot">
+                <span style="background:{{ col }}"></span>
+                {{ ph.replace("_"," ") }}: {{ phases_dist[ph] }}w
+            </div>
+            {% endif %} {% endfor %}
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <!-- 1. Timeline (full width) -->
+            <div class="chart-box full">
+                <div
+                    style="
+                        font-size: 0.65rem;
+                        color: var(--muted);
+                        margin-bottom: 1rem;
+                        font-family: &quot;Space Mono&quot;, monospace;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                    "
+                >
+                    Weekly interest timeline — coloured by lifecycle phase ·
+                    threshold lines &amp; event markers shown
+                </div>
+                <div style="position: relative; height: 280px">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div
+                    id="tlThreshLegend"
+                    style="
+                        display: flex;
+                        gap: 0.65rem;
+                        flex-wrap: wrap;
+                        margin-top: 0.75rem;
+                        padding-top: 0.65rem;
+                        border-top: 1px solid var(--border);
+                    "
+                ></div>
+            </div>
+
+            <!-- 2. Normalized (full width) -->
+            <div class="chart-box full">
+                <div
+                    style="
+                        font-size: 0.65rem;
+                        color: var(--muted);
+                        margin-bottom: 1rem;
+                        font-family: &quot;Space Mono&quot;, monospace;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                    "
+                >
+                    Normalized interest (0–1 scale) — coloured by lifecycle
+                    phase · threshold lines &amp; event markers shown
+                </div>
+                <div style="position: relative; height: 200px">
+                    <canvas id="normChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 3. Phase donut -->
+            <div class="chart-box">
+                <div
+                    style="
+                        font-size: 0.65rem;
+                        color: var(--muted);
+                        margin-bottom: 1rem;
+                        font-family: &quot;Space Mono&quot;, monospace;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                    "
+                >
+                    Phase distribution
+                </div>
+                <div style="position: relative; height: 260px">
+                    <canvas id="phaseDonut"></canvas>
+                </div>
+            </div>
+
+            <!-- 4. Yearly bar -->
+            <div class="chart-box">
+                <div
+                    style="
+                        font-size: 0.65rem;
+                        color: var(--muted);
+                        margin-bottom: 1rem;
+                        font-family: &quot;Space Mono&quot;, monospace;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                    "
+                >
+                    Average interest by year
+                </div>
+                <div style="position: relative; height: 260px">
+                    <canvas id="yearlyBar"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick-jump sidebar -->
+        <div style="max-width: 1100px; margin: 0 auto; padding: 0 2rem 4rem">
+            <div class="section-title">Jump to another meme</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+                {% for m in all_memes %}
+                <a
+                    href="/meme/{{ m.slug }}"
+                    style="font-size:.7rem;padding:5px 14px;border-radius:20px;border:1px solid var(--border);
+              color:{{ 'var(--accent)' if m.name == name else 'var(--muted)' }};
+              background:{{ 'rgba(254,202,87,.08)' if m.name == name else 'transparent' }};
+              text-decoration:none;font-family:Space Mono,monospace;transition:all .15s"
+                    onmouseover="
+                        this.style.borderColor = 'var(--accent)';
+                        this.style.color = 'var(--text)';
+                    "
+                    onmouseout="this.style.borderColor='var(--border)';this.style.color='{{ 'var(--accent)' if m.name == name else 'var(--muted)' }}'"
+                >
+                    {{ m.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <script>
+            const SLUG = "{{ slug }}";
+            const COLOR = "{{ color }}";
+
+            const chartDefaults = {
+                tooltip: {
+                    backgroundColor: "#1a1a24",
+                    borderColor: "#2a2a38",
+                    borderWidth: 1,
+                    titleColor: "#f0f0f8",
+                    bodyColor: "#7a7a9a",
+                    titleFont: { family: "Syne", weight: "bold" },
+                    bodyFont: { family: "Space Mono", size: 11 },
+                    padding: 10,
+                },
+                legend: {
+                    labels: {
+                        color: "#7a7a9a",
+                        font: { family: "Space Mono", size: 11 },
+                    },
+                },
+            };
+
+            const scaleDefaults = {
+                x: {
+                    ticks: {
+                        color: "#7a7a9a",
+                        font: { family: "Space Mono", size: 10 },
+                    },
+                    grid: { color: "#2a2a38" },
+                },
+                y: {
+                    ticks: {
+                        color: "#7a7a9a",
+                        font: { family: "Space Mono", size: 10 },
+                    },
+                    grid: { color: "#2a2a38" },
+                },
+            };
+
+            fetch(`/api/meme/${SLUG}`)
+                .then((r) => r.json())
+                .then((d) => {
+                    const dates = d.timeline.dates;
+                    const values = d.timeline.values;
+                    const normalized = d.timeline.normalized;
+                    const phases = d.timeline.phases;
+                    const pcols = d.phase_colors;
+
+                    // Color each point by lifecycle phase
+                    const pointColors = phases.map(
+                        (p) => pcols[p] || "#74B9FF",
+                    );
+
+                    // ── 1. Timeline chart — explorer style ───────────────────────────────────
+                    // Derive lifecycle event indices from the timeline data
+                    const peakVal = Math.max(...values);
+                    const peakIdx = values.indexOf(peakVal);
+
+                    // birth: first index where value > 5% of peak
+                    const bT = 0.05,
+                        dT = 0.5,
+                        xT = 0.1,
+                        rT = 0.3;
+                    const birthIdx = values.findIndex((v) => v > peakVal * bT);
+                    // decay: first idx >= peak where value < 50% of peak
+                    let decayIdx = values.length - 1;
+                    for (let i = peakIdx; i < values.length; i++) {
+                        if (values[i] < peakVal * dT) {
+                            decayIdx = i;
+                            break;
+                        }
+                    }
+                    // death: first idx >= decayIdx where value < 10% of peak
+                    let deathIdx = null;
+                    for (let i = decayIdx; i < values.length; i++) {
+                        if (values[i] < peakVal * xT) {
+                            deathIdx = i;
+                            break;
+                        }
+                    }
+                    // reborn: first idx >= deathIdx+4 where value > 30% of peak
+                    let rebornIdx = null;
+                    if (deathIdx !== null) {
+                        for (let i = deathIdx + 4; i < values.length; i++) {
+                            if (values[i] > peakVal * rT) {
+                                rebornIdx = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Threshold line datasets
+                    const tlDatasets = [
+                        {
+                            label: "Interest",
+                            data: values,
+                            borderColor: COLOR,
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            fill: true,
+                            backgroundColor: "transparent",
+                            tension: 0.3,
+                            segment: {
+                                borderColor: (ctx) =>
+                                    pcols[phases[ctx.p1DataIndex]] || COLOR,
+                            },
+                            order: 1,
+                        },
+                        {
+                            label: `Birth >${Math.round(bT * 100)}% (=${(peakVal * bT).toFixed(1)})`,
+                            data: Array(dates.length).fill(peakVal * bT),
+                            borderColor: "#1DD1A1",
+                            borderWidth: 1.5,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 2,
+                        },
+                        {
+                            label: `Decay <${Math.round(dT * 100)}% (=${(peakVal * dT).toFixed(1)})`,
+                            data: Array(dates.length).fill(peakVal * dT),
+                            borderColor: "#FF9F43",
+                            borderWidth: 1.5,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 2,
+                        },
+                        {
+                            label: `Death <${Math.round(xT * 100)}% (=${(peakVal * xT).toFixed(1)})`,
+                            data: Array(dates.length).fill(peakVal * xT),
+                            borderColor: "#FF6B6B",
+                            borderWidth: 1.5,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 2,
+                        },
+                        {
+                            label: `Reborn >${Math.round(rT * 100)}% (=${(peakVal * rT).toFixed(1)})`,
+                            data: Array(dates.length).fill(peakVal * rT),
+                            borderColor: "#A29BFE",
+                            borderWidth: 1.5,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 2,
+                        },
+                        {
+                            label: "Peak",
+                            data: values.map((v, i) =>
+                                i === peakIdx ? v : null,
+                            ),
+                            borderColor: "#FECA57",
+                            backgroundColor: "#FECA57",
+                            pointRadius: values.map((_, i) =>
+                                i === peakIdx ? 9 : 0,
+                            ),
+                            pointStyle: "star",
+                            fill: false,
+                            showLine: false,
+                            order: 0,
+                        },
+                    ];
+
+                    new Chart(document.getElementById("timelineChart"), {
+                        type: "line",
+                        data: { labels: dates, datasets: tlDatasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: "index", intersect: false },
+                            plugins: {
+                                legend: {
+                                    position: "bottom",
+                                    labels: {
+                                        color: "#7a7a9a",
+                                        font: { family: "Space Mono", size: 9 },
+                                        boxWidth: 12,
+                                        boxHeight: 2,
+                                        padding: 8,
+                                        filter: (i) =>
+                                            i.datasetIndex >= 1 &&
+                                            i.datasetIndex <= 4,
+                                    },
+                                },
+                                tooltip: {
+                                    ...chartDefaults.tooltip,
+                                    filter: (i) => i.datasetIndex === 0,
+                                    callbacks: {
+                                        title: (items) => items[0].label,
+                                        label: (item) => [
+                                            ` Interest: ${item.raw}`,
+                                            ` Phase: ${phases[item.dataIndex]?.replace(/_/g, " ") || ""}`,
+                                        ],
+                                    },
+                                },
+                            },
+                            scales: {
+                                x: {
+                                    type: "time",
+                                    time: { unit: "year" },
+                                    ticks: {
+                                        color: "#7a7a9a",
+                                        font: {
+                                            family: "Space Mono",
+                                            size: 10,
+                                        },
+                                    },
+                                    grid: { color: "#2a2a38" },
+                                },
+                                y: {
+                                    ...scaleDefaults.y,
+                                    min: 0,
+                                    max: Math.ceil(peakVal * 1.1),
+                                },
+                            },
+                        },
+                        plugins: [
+                            {
+                                id: "phaseBg",
+                                beforeDraw(chart) {
+                                    const {
+                                        ctx,
+                                        scales: { x, y },
+                                    } = chart;
+                                    if (!x || !y) return;
+                                    d.phase_segments.forEach((seg) => {
+                                        const x1 = x.getPixelForValue(
+                                            new Date(seg.start),
+                                        );
+                                        const x2 = x.getPixelForValue(
+                                            new Date(seg.end),
+                                        );
+                                        if (isNaN(x1) || isNaN(x2)) return;
+                                        ctx.save();
+                                        ctx.fillStyle =
+                                            (pcols[seg.phase] || "#74B9FF") +
+                                            "18";
+                                        ctx.fillRect(
+                                            x1,
+                                            y.top,
+                                            x2 - x1,
+                                            y.bottom - y.top,
+                                        );
+                                        ctx.restore();
+                                    });
+                                },
+                            },
+                            {
+                                id: "eventLines",
+                                afterDraw(chart) {
+                                    const {
+                                        ctx,
+                                        scales: { x, y },
+                                    } = chart;
+                                    if (!x || !y) return;
+                                    const events = [
+                                        {
+                                            i: birthIdx,
+                                            c: "#1DD1A1",
+                                            t: "BIRTH",
+                                        },
+                                        { i: peakIdx, c: "#FECA57", t: "PEAK" },
+                                        {
+                                            i: decayIdx,
+                                            c: "#FF9F43",
+                                            t: "DECAY",
+                                        },
+                                        {
+                                            i: deathIdx,
+                                            c: "#FF6B6B",
+                                            t: "DEATH",
+                                        },
+                                        {
+                                            i: rebornIdx,
+                                            c: "#A29BFE",
+                                            t: "REBORN",
+                                        },
+                                    ];
+                                    events.forEach((ev) => {
+                                        if (ev.i === null || ev.i === undefined)
+                                            return;
+                                        const px = x.getPixelForValue(
+                                            new Date(dates[ev.i]),
+                                        );
+                                        ctx.save();
+                                        ctx.strokeStyle = ev.c + "bb";
+                                        ctx.lineWidth = 1.5;
+                                        ctx.setLineDash([4, 4]);
+                                        ctx.beginPath();
+                                        ctx.moveTo(px, y.top);
+                                        ctx.lineTo(px, y.bottom);
+                                        ctx.stroke();
+                                        ctx.setLineDash([]);
+                                        ctx.fillStyle = ev.c;
+                                        ctx.font =
+                                            "700 8px 'Space Mono',monospace";
+                                        ctx.textAlign = "center";
+                                        ctx.fillText(ev.t, px, y.top - 4);
+                                        ctx.restore();
+                                    });
+                                },
+                            },
+                        ],
+                    });
+
+                    // Populate threshold legend for timeline
+                    document.getElementById("tlThreshLegend").innerHTML = [
+                        {
+                            c: "#1DD1A1",
+                            l: `Birth >${Math.round(bT * 100)}% = ${(peakVal * bT).toFixed(1)}`,
+                        },
+                        {
+                            c: "#FF9F43",
+                            l: `Decay <${Math.round(dT * 100)}% = ${(peakVal * dT).toFixed(1)}`,
+                        },
+                        {
+                            c: "#FF6B6B",
+                            l: `Death <${Math.round(xT * 100)}% = ${(peakVal * xT).toFixed(1)}`,
+                        },
+                        {
+                            c: "#A29BFE",
+                            l: `Reborn >${Math.round(rT * 100)}% = ${(peakVal * rT).toFixed(1)}`,
+                        },
+                    ]
+                        .map(
+                            (
+                                it,
+                            ) => `<div style="display:flex;align-items:center;gap:4px;font-size:0.58rem;font-family:'Space Mono',monospace">
+                        <div style="width:16px;border-top:2px dashed ${it.c};flex-shrink:0"></div>
+                        <span style="color:${it.c}">${it.l}</span></div>`,
+                        )
+                        .join("");
+
+                    // ── 2. Normalized chart — explorer style ─────────────────────────────────
+                    new Chart(document.getElementById("normChart"), {
+                        type: "line",
+                        data: {
+                            labels: dates,
+                            datasets: [
+                                {
+                                    label: "Normalized (0–1)",
+                                    data: normalized,
+                                    borderColor: "#A29BFE",
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    fill: true,
+                                    backgroundColor: "transparent",
+                                    tension: 0.3,
+                                    segment: {
+                                        borderColor: (ctx) =>
+                                            pcols[phases[ctx.p1DataIndex]] ||
+                                            "#A29BFE",
+                                    },
+                                    order: 1,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    ...chartDefaults.tooltip,
+                                    filter: (i) => i.datasetIndex === 0,
+                                    callbacks: {
+                                        title: (items) => items[0].label,
+                                        label: (item) => [
+                                            ` Norm: ${Number(item.raw).toFixed(2)}`,
+                                            ` Phase: ${phases[item.dataIndex]?.replace(/_/g, " ") || ""}`,
+                                        ],
+                                    },
+                                },
+                            },
+                            scales: {
+                                x: {
+                                    type: "time",
+                                    time: { unit: "year" },
+                                    ticks: {
+                                        color: "#7a7a9a",
+                                        font: {
+                                            family: "Space Mono",
+                                            size: 10,
+                                        },
+                                    },
+                                    grid: { color: "#2a2a38" },
+                                },
+                                y: {
+                                    min: 0,
+                                    max: 1.05,
+                                    ticks: {
+                                        color: "#7a7a9a",
+                                        font: {
+                                            family: "Space Mono",
+                                            size: 10,
+                                        },
+                                        callback: (v) => v.toFixed(1),
+                                    },
+                                    grid: { color: "#2a2a38" },
+                                },
+                            },
+                        },
+                        plugins: [
+                            {
+                                id: "normPhaseBg",
+                                beforeDraw(chart) {
+                                    const {
+                                        ctx,
+                                        scales: { x, y },
+                                    } = chart;
+                                    if (!x || !y) return;
+                                    d.phase_segments.forEach((seg) => {
+                                        const x1 = x.getPixelForValue(
+                                            new Date(seg.start),
+                                        );
+                                        const x2 = x.getPixelForValue(
+                                            new Date(seg.end),
+                                        );
+                                        if (isNaN(x1) || isNaN(x2)) return;
+                                        ctx.save();
+                                        ctx.fillStyle =
+                                            (pcols[seg.phase] || "#74B9FF") +
+                                            "18";
+                                        ctx.fillRect(
+                                            x1,
+                                            y.top,
+                                            x2 - x1,
+                                            y.bottom - y.top,
+                                        );
+                                        ctx.restore();
+                                    });
+                                },
+                            },
+                        ],
+                    });
+
+                    // ── 3. Phase donut ───────────────────────────────────────────────────────
+                    const phKeys = Object.keys(d.phase_dist);
+                    const phVals = Object.values(d.phase_dist);
+                    const phCols = phKeys.map((k) => pcols[k] || "#74B9FF");
+
+                    new Chart(document.getElementById("phaseDonut"), {
+                        type: "doughnut",
+                        data: {
+                            labels: phKeys.map((k) => k.replace(/_/g, " ")),
+                            datasets: [
+                                {
+                                    data: phVals,
+                                    backgroundColor: phCols,
+                                    borderColor: "#13131a",
+                                    borderWidth: 3,
+                                    hoverOffset: 8,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: "65%",
+                            plugins: {
+                                legend: {
+                                    position: "bottom",
+                                    labels: {
+                                        color: "#7a7a9a",
+                                        font: {
+                                            family: "Space Mono",
+                                            size: 10,
+                                        },
+                                        padding: 12,
+                                        boxWidth: 10,
+                                        boxHeight: 10,
+                                    },
+                                },
+                                tooltip: {
+                                    ...chartDefaults.tooltip,
+                                    callbacks: {
+                                        label: (i) =>
+                                            ` ${i.label}: ${i.raw} weeks`,
+                                    },
+                                },
+                            },
+                        },
+                    });
+
+                    // ── 4. Yearly bar ────────────────────────────────────────────────────────
+                    const yColors = d.yearly.labels.map((yr, i) => {
+                        // find dominant phase for that year
+                        const idx = Math.min(
+                            i *
+                                Math.floor(
+                                    values.length / d.yearly.labels.length,
+                                ),
+                            values.length - 1,
+                        );
+                        const ph = phases[idx] || "unknown";
+                        return pcols[ph] || COLOR;
+                    });
+
+                    new Chart(document.getElementById("yearlyBar"), {
+                        type: "bar",
+                        data: {
+                            labels: d.yearly.labels,
+                            datasets: [
+                                {
+                                    label: "Avg interest",
+                                    data: d.yearly.values,
+                                    backgroundColor: yColors.map(
+                                        (c) => c + "bb",
+                                    ),
+                                    borderColor: yColors,
+                                    borderWidth: 1.5,
+                                    borderRadius: 6,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { ...chartDefaults.tooltip },
+                            },
+                            scales: {
+                                x: {
+                                    ticks: {
+                                        color: "#7a7a9a",
+                                        font: {
+                                            family: "Space Mono",
+                                            size: 11,
+                                        },
+                                    },
+                                    grid: { color: "#2a2a38" },
+                                },
+                                y: {
+                                    min: 0,
+                                    ticks: {
+                                        color: "#7a7a9a",
+                                        font: {
+                                            family: "Space Mono",
+                                            size: 10,
+                                        },
+                                    },
+                                    grid: { color: "#2a2a38" },
+                                },
+                            },
+                        },
+                    });
+                });
+        </script>
+
+        {% endif %}
+    </body>
+</html>
