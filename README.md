@@ -196,6 +196,7 @@ Open in browser: `http://127.0.0.1:5000`
 ### Home Page — `/`
 
 Displays all 20 meme cards with sparkline trend graphs, lifecycle badges, peak interest scores, and a full comparison bar chart ranking all memes by virality score.
+![Home Page](Screen_pic/home2.png)
 
 All labels and stats are read directly from `meme_lifecycle_dataset.csv`.
 Sparklines are drawn from the last 52 weeks of `meme_weekly_trends.csv`.
@@ -205,6 +206,9 @@ Sparklines are drawn from the last 52 weeks of `meme_weekly_trends.csv`.
 ### Meme Detail Page — `/meme/<slug>`
 
 A single reusable template handles all 20 memes.
+
+![Home Page](Screen_pic/example1.png)
+
 Clicking any meme card opens its individual page showing:
 
 - Stat cards: peak interest, peak date, birth date, death date, rise speed, decay speed, reborn status, platform spread
@@ -216,6 +220,8 @@ Clicking any meme card opens its individual page showing:
 ---
 
 ### Explore Page — `/explore`
+
+![Home Page](Screen_pic/explore.png)
 
 The research analytics dashboard. Charts include:
 
@@ -237,6 +243,9 @@ Also includes a full scrollable dataset table with all 56 lifecycle columns and 
 ---
 
 ### Lifecycle Algorithm Page — `/lifecycle`
+
+![Home Page](Screen_pic/algo.png)
+![Home Page](Screen_pic/algo3.png)
 
 A visual teaching tool explaining how the algorithm works for all 20 memes.
 
