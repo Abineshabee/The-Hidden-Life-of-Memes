@@ -2,8 +2,6 @@
 <img src="logo.svg">
 </p>
 
-# The Hidden Life of Memes: Survival of the Funniest
-
 ## Overview
 
 Memes are not just jokes — they behave like **digital organisms**.
@@ -345,8 +343,8 @@ All pages share the same sticky navigation bar:
 Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/meme-lifecycle-analysis.git
-cd meme-lifecycle-analysis/meme_app
+git clone https://github.com/Abineshabee/The-Hidden-Life-of-Memes.git
+cd The-Hidden-Life-of-Memes/meme_app
 ```
 
 Install dependencies:
@@ -395,4 +393,6 @@ The 50% mortality rate, the rarity of genuine reborn events, and the disconnect 
 
 ## License
 
-This project is intended for **research and educational purposes**.
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+
+See the [LICENSE](LICENSE) file for details.
