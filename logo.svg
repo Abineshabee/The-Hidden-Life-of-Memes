@@ -1,0 +1,89 @@
+<svg width="920" height="300" viewBox="0 0 920 300" xmlns="http://www.w3.org/2000/svg">
+
+<style>
+
+.title{
+font-family: Impact, Arial Black, sans-serif;
+font-size:56px;
+fill:white;
+font-weight:900;
+letter-spacing:2px;
+}
+
+.subtitle{
+font-family: Arial, sans-serif;
+font-size:15px;
+fill:#00ff9c;
+letter-spacing:6px;
+}
+
+.emoji{
+font-size:28px;
+}
+
+</style>
+
+<!-- background -->
+<rect width="100%" height="100%" fill="#0d1117"></rect>
+
+<!-- elastic meme platform -->
+<path d="M200 170 Q460 190 720 170" stroke="#00ff9c" stroke-width="4" fill="none">
+
+<animate attributeName="d" values="
+M200 170 Q460 190 720 170;
+M200 170 Q460 150 720 170;
+M200 170 Q460 190 720 170" dur="4s" repeatCount="indefinite"></animate>
+
+</path>
+
+<!-- title -->
+<text x="460" y="120" text-anchor="middle" class="title">
+
+THE HIDDEN LIFE OF MEMES
+
+<animateTransform attributeName="transform" type="translate" values="-2 0;2 0;-2 0" dur="2s" repeatCount="indefinite"></animateTransform>
+
+</text>
+
+<!-- subtitle -->
+<text x="460" y="210" text-anchor="middle" class="subtitle">
+SURVIVAL OF THE FUNNIEST
+</text>
+
+<!-- floating memes -->
+
+<text x="120" y="70" class="emoji">🤣
+<animateTransform attributeName="transform" type="translate" values="0 0;0 -15;0 0" dur="3s" repeatCount="indefinite"></animateTransform>
+</text>
+
+<text x="800" y="90" class="emoji">😂
+<animateTransform attributeName="transform" type="translate" values="0 0;0 -18;0 0" dur="2.5s" repeatCount="indefinite"></animateTransform>
+</text>
+
+<text x="200" y="250" class="emoji">💀
+<animateTransform attributeName="transform" type="translate" values="0 0;0 -16;0 0" dur="3.5s" repeatCount="indefinite"></animateTransform>
+</text>
+
+<text x="720" y="240" class="emoji">🔥
+<animateTransform attributeName="transform" type="translate" values="0 0;0 -14;0 0" dur="2.8s" repeatCount="indefinite"></animateTransform>
+</text>
+
+<!-- meme particles -->
+
+<circle cx="150" cy="200" r="4" fill="#00ff9c">
+<animate attributeName="cy" values="200;180;200" dur="3s" repeatCount="indefinite"></animate>
+</circle>
+
+<circle cx="350" cy="230" r="4" fill="#00ff9c">
+<animate attributeName="cy" values="230;210;230" dur="2.5s" repeatCount="indefinite"></animate>
+</circle>
+
+<circle cx="600" cy="210" r="4" fill="#00ff9c">
+<animate attributeName="cy" values="210;190;210" dur="3.3s" repeatCount="indefinite"></animate>
+</circle>
+
+<circle cx="750" cy="190" r="4" fill="#00ff9c">
+<animate attributeName="cy" values="190;170;190" dur="2.7s" repeatCount="indefinite"></animate>
+</circle>
+
+</svg>
