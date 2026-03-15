@@ -10,6 +10,8 @@ They are **born**, **spread**, **evolve**, **decline**, and sometimes **reappear
 This project explores the **evolutionary lifecycle of internet memes** using data-driven analysis.
 By combining multiple internet data sources, we reconstruct how memes grow, peak, decay, and survive over time — week by week, from 2010 to 2024.
 
+![Home Page](Screen_pic/home.png)
+
 The central research question:
 
 > **Why do some memes survive for years while others disappear in weeks?**
