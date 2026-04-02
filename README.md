@@ -7,6 +7,8 @@
 Memes are not just jokes — they behave like **digital organisms**.
 They are **born**, **spread**, **evolve**, **decline**, and sometimes **reappear years later**.
 
+🌐 **Live Demo:** [abineshabee.pythonanywhere.com](https://abineshabee.pythonanywhere.com)
+
 This project explores the **evolutionary lifecycle of internet memes** using data-driven analysis.
 By combining multiple internet data sources, we reconstruct how memes grow, peak, decay, and survive over time — week by week, from 2010 to 2024.
 
